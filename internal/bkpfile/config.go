@@ -1,6 +1,7 @@
 package bkpfile
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,6 +23,22 @@ type Config struct {
 	// UseCurrentDirName controls whether to include current directory name in backup path
 	// Architecture: Config.UseCurrentDirName
 	UseCurrentDirName bool `yaml:"use_current_dir_name"`
+}
+
+// ConfigValue represents a configuration parameter with its computed value and source
+// Architecture: Data Objects - ConfigValue
+type ConfigValue struct {
+	// Name is the configuration parameter name
+	// Architecture: ConfigValue.Name
+	Name string
+
+	// Value is the computed configuration value including defaults
+	// Architecture: ConfigValue.Value
+	Value string
+
+	// Source is the source file path or "default" for default values
+	// Architecture: ConfigValue.Source
+	Source string
 }
 
 // DefaultConfig creates a new Config with default values
@@ -59,6 +76,98 @@ func GetConfigSearchPath() []string {
 	}
 
 	return paths
+}
+
+// DisplayConfig displays computed configuration values and exits
+// Architecture: Core Functions - Configuration Management - DisplayConfig
+func DisplayConfig() error {
+	// Get configuration search paths
+	searchPaths := GetConfigSearchPath()
+
+	// Initialize with default values and track sources
+	defaultCfg := DefaultConfig()
+	configValues := []ConfigValue{
+		{Name: "backup_dir_path", Value: defaultCfg.BackupDirPath, Source: "default"},
+		{Name: "use_current_dir_name", Value: fmt.Sprintf("%t", defaultCfg.UseCurrentDirName), Source: "default"},
+		{Name: "config", Value: defaultCfg.Config, Source: "default"},
+	}
+
+	// Process configuration files in order with precedence rules
+	for _, configPath := range searchPaths {
+		// Store original path for source display
+		originalPath := configPath
+
+		// Handle relative paths by resolving them relative to current directory
+		if !filepath.IsAbs(configPath) {
+			configPath = filepath.Join(".", configPath)
+			// Update original path to include ./ prefix for relative paths
+			if !strings.HasPrefix(originalPath, "./") && !strings.HasPrefix(originalPath, "/") {
+				originalPath = "./" + originalPath
+			}
+		}
+
+		// Check if config file exists
+		if _, err := os.Stat(configPath); os.IsNotExist(err) {
+			continue
+		}
+
+		// Read config file
+		data, err := os.ReadFile(configPath)
+		if err != nil {
+			return fmt.Errorf("failed to read config file %s: %w", configPath, err)
+		}
+
+		// Parse YAML into a map to check which fields are actually set
+		var yamlData map[string]interface{}
+		if err := yaml.Unmarshal(data, &yamlData); err != nil {
+			return fmt.Errorf("failed to parse config file %s: %w", configPath, err)
+		}
+
+		// Parse YAML into a temporary config
+		tempCfg := &Config{}
+		if err := yaml.Unmarshal(data, tempCfg); err != nil {
+			return fmt.Errorf("failed to parse config file %s: %w", configPath, err)
+		}
+
+		// Update configuration values with source tracking (earlier files take precedence)
+		if _, exists := yamlData["backup_dir_path"]; exists && tempCfg.BackupDirPath != "" {
+			// Expand home directory in backup path
+			backupPath := tempCfg.BackupDirPath
+			if strings.HasPrefix(backupPath, "~/") {
+				if homeDir, err := os.UserHomeDir(); err == nil {
+					backupPath = filepath.Join(homeDir, backupPath[2:])
+				}
+			}
+			// Update only if not already set by a previous (higher precedence) file
+			if configValues[0].Source == "default" {
+				configValues[0].Value = backupPath
+				configValues[0].Source = originalPath
+			}
+		}
+
+		if _, exists := yamlData["use_current_dir_name"]; exists {
+			// Update only if not already set by a previous (higher precedence) file
+			if configValues[1].Source == "default" {
+				configValues[1].Value = fmt.Sprintf("%t", tempCfg.UseCurrentDirName)
+				configValues[1].Source = originalPath
+			}
+		}
+
+		if _, exists := yamlData["config"]; exists && tempCfg.Config != "" {
+			// Update only if not already set by a previous (higher precedence) file
+			if configValues[2].Source == "default" {
+				configValues[2].Value = tempCfg.Config
+				configValues[2].Source = originalPath
+			}
+		}
+	}
+
+	// Display each configuration value with name, computed value, and source
+	for _, cv := range configValues {
+		fmt.Printf("%s: %s (source: %s)\n", cv.Name, cv.Value, cv.Source)
+	}
+
+	return nil
 }
 
 // LoadConfig loads configuration from YAML files using discovery path or returns default config

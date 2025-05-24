@@ -19,6 +19,18 @@ This document outlines the testing requirements, architecture, and approach for 
   - Tests default path when environment variable not set
   - Tests colon-separated path list parsing
   - Tests home directory expansion
+- `TestDisplayConfig`: Tests configuration value display
+  - Validates configuration value computation and source tracking
+  - Tests environment variable processing for configuration paths
+  - Tests default value handling and source attribution
+  - Tests output format with name, value, and source
+  - Test cases:
+    - Configuration with default values only
+    - Configuration from single file
+    - Configuration from multiple files with precedence
+    - Configuration with missing files
+    - Configuration with invalid files
+    - Environment variable override scenarios
 - `TestCopyFile`: Tests file copying
   - Validates file copying and permission preservation
 - `TestListBackups`: Tests backup listing
@@ -57,12 +69,22 @@ This document outlines the testing requirements, architecture, and approach for 
     - List with existing backups
     - List with no backups
     - List with invalid file path
+- `TestConfigFlag`: Tests config flag functionality
+  - Validates --config flag behavior
+  - Test cases:
+    - Display config with default values only
+    - Display config with values from single configuration file
+    - Display config with values from multiple configuration files
+    - Display config with `BKPFILE_CONFIG` environment variable set
+    - Display config with invalid configuration files (error handling)
+    - Verify application exits after displaying configuration
 - `TestCmdArgsValidation`: Tests command-line arguments
   - Validates command-line interface
   - Test cases:
     - Invalid flag combinations
     - Missing file path
     - Invalid file path
+    - Config flag with other arguments (should be ignored)
 - `TestDryRun`: Tests dry-run mode
   - Validates dry-run mode behavior
   - Test cases:
@@ -78,6 +100,7 @@ This document outlines the testing requirements, architecture, and approach for 
     - List operation with multiple configuration files
     - Error handling with invalid configuration paths
     - Dry-run with custom configuration discovery
+    - Configuration display with various environment setups
 
 ## Test Approach
 **Implementation**: `*_test.go` files
@@ -96,6 +119,8 @@ This document outlines the testing requirements, architecture, and approach for 
 - Creates multiple temporary configuration files for precedence testing
 - Tests home directory expansion and path resolution
 - Tests configuration discovery error conditions and edge cases
+- Validates configuration display output format and source tracking
+- Tests application exit behavior after configuration display
 
 ## Test Environment
 - Uses Go's testing package
@@ -103,6 +128,8 @@ This document outlines the testing requirements, architecture, and approach for 
 - Mocks time functions for consistent testing
 - Simulates file system operations
 - Tests on both macOS and Linux platforms
+- Mocks environment variables for configuration testing
+- Creates temporary configuration files with various content
 
 ## Test Coverage Requirements
 - All core functions must have unit tests
@@ -111,6 +138,8 @@ This document outlines the testing requirements, architecture, and approach for 
 - Error conditions must be tested
 - Platform-specific behaviors must be verified
 - File system operations must be tested thoroughly
+- Configuration display functionality must be comprehensively tested
+- Environment variable handling must be verified
 
 ## Running Tests
 ```bash
@@ -122,4 +151,5 @@ go test ./internal/bkpfile -v
 - Test data is cleaned up after tests
 - Test files use consistent naming patterns
 - Test data covers various file sizes and types
-- Test data includes special characters and edge cases 
+- Test data includes special characters and edge cases
+- Test configuration files cover various YAML structures and edge cases 

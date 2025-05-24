@@ -11,7 +11,12 @@ This document describes the system architecture and design of the BkpFile applic
    - `BackupDirPath`: string - Path where backups are stored
    - `UseCurrentDirName`: bool - Whether to use current directory name in backup path
 
-2. **Backup**
+2. **ConfigValue**
+   - `Name`: string - Configuration parameter name
+   - `Value`: string - Computed configuration value including defaults
+   - `Source`: string - Source file path or "default" for default values
+
+3. **Backup**
    - `Name`: string - Name of the backup file
    - `Path`: string - Full path to the backup file
    - `CreationTime`: time.Time - When the backup was created
@@ -30,6 +35,11 @@ This document describes the system architecture and design of the BkpFile applic
      - Reads `BKPFILE_CONFIG` environment variable
      - Returns default path if environment variable not set
      - Handles colon-separated path list parsing
+   - `DisplayConfig() error`: Displays computed configuration values and exits
+     - Processes configuration files from `BKPFILE_CONFIG` environment variable
+     - Shows each configuration value with name, computed value, and source file
+     - Displays format: `name: value (source: source_file)`
+     - Application exits after displaying values
 
 2. **File System Operations**
    - `CopyFile(src, dst string) error`: Creates an exact copy of the specified file
@@ -59,6 +69,7 @@ This document describes the system architecture and design of the BkpFile applic
    - Global flags:
      - `--dry-run`: Show what would be done without creating backups
      - `--list`: List backups for the specified file
+     - `--config`: Display computed configuration values and exit
    - Default behavior:
      - Creates backup of specified file with optional note
      - Usage: `bkpfile [FILE_PATH] [NOTE]`
@@ -86,6 +97,14 @@ This document describes the system architecture and design of the BkpFile applic
      5. Extract backup information and notes
      6. Sort backups by creation time
      7. Display backup information
+
+   - For displaying configuration:
+     1. Read `BKPFILE_CONFIG` environment variable or use default search path
+     2. Process configuration files in order with precedence rules
+     3. Merge configuration values with defaults
+     4. Track source file for each configuration value
+     5. Display each configuration value with name, computed value, and source
+     6. Exit application after display
 
 3. **Utility Functions**
    - Backup naming follows format: `filename-YYYY-MM-DD-hh-mm[=note]`

@@ -19,6 +19,7 @@ var (
 	// Global flags
 	dryRun bool
 	list   bool
+	config bool
 
 	// Root command
 	rootCmd = &cobra.Command{
@@ -26,8 +27,18 @@ var (
 		Short:   "Single file backup CLI application",
 		Long:    `A command-line application for creating and managing file backups.`,
 		Version: fmt.Sprintf("%s (compiled %s) [%s]", version, compileDate, platform),
-		Args:    cobra.RangeArgs(1, 2),
+		Args:    cobra.RangeArgs(0, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Handle config flag first (exclusive operation)
+			if config {
+				return bkpfile.DisplayConfig()
+			}
+
+			// Require at least one argument for other operations
+			if len(args) < 1 {
+				return fmt.Errorf("file path is required")
+			}
+
 			filePath := args[0]
 			note := ""
 			if len(args) > 1 {
@@ -69,6 +80,7 @@ func init() {
 	// Add global flags
 	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Show what would be done without creating backups")
 	rootCmd.PersistentFlags().BoolVar(&list, "list", false, "List all backups for the specified file")
+	rootCmd.PersistentFlags().BoolVar(&config, "config", false, "Display computed configuration values and exit")
 
 	// Customize help template to include version
 	rootCmd.SetHelpTemplate(`{{with (or .Long .Short)}}{{. | trimTrailingWhitespaces}}

@@ -24,7 +24,14 @@ This document contains specifications that MUST NOT be changed without a major v
    - Display format: `.bkpfile/path/to/file.txt-2024-03-21-15-30=note (created: 2024-03-21 15:30:00)`
    - This command structure and output format must be preserved
 
-2. Create Backup:
+2. Display Configuration:
+   - Command: `bkpfile --config`
+   - Display computed configuration values with name, value, and source
+   - Process configuration files from `BKPFILE_CONFIG` environment variable
+   - Exit after displaying values
+   - This command behavior must remain unchanged once implemented
+
+3. Create Backup:
    - Command: `bkpfile [FILE_PATH] [NOTE]`
    - Compare with most recent backup before creating
    - Skip if identical to most recent backup

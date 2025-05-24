@@ -76,7 +76,21 @@ BkpFile is a command-line application for macOS and Linux that creates backups o
 - Backups are sorted by creation time (most recent first)
 - Backups are organized by their source file paths
 
-### 2. Create Backup
+### 2. Display Configuration
+- Displays computed configuration values after processing configuration files
+- Usage: `bkpfile --config`
+- Shows each configuration value with its name, computed value (including defaults), and source file
+- Example output format:
+  ```
+  backup_dir_path: ../.bkpfile (source: default)
+  use_current_dir_name: true (source: ~/.bkpfile.yml)
+  config: ./.bkpfile.yml:~/.bkpfile.yml (source: default)
+  ```
+- The application exits after displaying the configuration values
+- Configuration files are processed from the `BKPFILE_CONFIG` environment variable path list
+- If `BKPFILE_CONFIG` is not set, uses the default search path
+
+### 3. Create Backup
 - Creates a copy of the specified file
 - Usage: `bkpfile [FILE_PATH] [NOTE]`
 - Before creating a backup:

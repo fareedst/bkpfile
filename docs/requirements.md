@@ -33,6 +33,27 @@ if err != nil {
 backupPath := cfg.BackupDirPath
 ```
 
+### ConfigValue
+**Implementation**: `config.go`
+**Specification Requirements**:
+- Fields:
+  - `Name`: `ConfigValue.Name`
+    - Spec: "Configuration parameter name"
+  - `Value`: `ConfigValue.Value`
+    - Spec: "Computed configuration value including defaults"
+  - `Source`: `ConfigValue.Source`
+    - Spec: "Source file path or 'default' for default values"
+
+**Example Usage**:
+```go
+// Create configuration value entry
+configValue := &ConfigValue{
+    Name:   "backup_dir_path",
+    Value:  "../.bkpfile",
+    Source: "~/.bkpfile.yml",
+}
+```
+
 ### Backup
 **Implementation**: `backup.go`
 **Specification Requirements**:
@@ -88,6 +109,22 @@ backup := &Backup{
     - Invalid configuration values
     - File system errors
 
+- `DisplayConfig()`: `DisplayConfig() error`
+  - Spec: "Displays computed configuration values and exits"
+  - Input: None
+  - Output: `error` - Any error encountered
+  - Behavior:
+    - Processes configuration files from `BKPFILE_CONFIG` environment variable
+    - If `BKPFILE_CONFIG` not set, uses default search path
+    - Shows each configuration value with name, computed value, and source file
+    - Displays format: `name: value (source: source_file)`
+    - Default values show source as "default"
+    - Application exits after displaying values
+  - Error Cases:
+    - Configuration file read errors
+    - Invalid YAML format
+    - Environment variable parsing errors
+
 **Example Usage**:
 ```go
 // Create default configuration
@@ -95,6 +132,12 @@ cfg := DefaultConfig()
 
 // Load configuration from YAML file
 cfg, err := LoadConfig(".")
+if err != nil {
+    log.Fatal(err)
+}
+
+// Display configuration values and exit
+err = DisplayConfig()
 if err != nil {
     log.Fatal(err)
 }
@@ -230,6 +273,9 @@ err = CreateBackupWithTime(cfg, "/path/to/file.txt", "test_backup", false, func(
     - Spec: "List all backups for the specified file"
     - Usage: `bkpfile --list [FILE_PATH]`
     - Shows paths relative to current directory
+  - `--config`: Implemented in `main.go`
+    - Spec: "Display computed configuration values and exit"
+    - Usage: `bkpfile --config`
 - Default behavior:
   - Creates backup of specified file with optional note
   - Usage: `bkpfile [FILE_PATH] [NOTE]`
@@ -263,6 +309,16 @@ err = CreateBackupWithTime(cfg, "/path/to/file.txt", "test_backup", false, func(
     5. Extract backup information and notes
     6. Sort backups by creation time
     7. Display backup information
+
+- Configuration display workflow: `DisplayConfig()`
+  - Spec: "Displays computed configuration values and exits"
+  - Steps:
+    1. Read `BKPFILE_CONFIG` environment variable or use default search path
+    2. Process configuration files in order with precedence rules
+    3. Merge configuration values with defaults
+    4. Track source file for each configuration value
+    5. Display each configuration value with name, computed value, and source
+    6. Exit application after display
 
 ### Utility Functions
 **Implementation**: Various files
