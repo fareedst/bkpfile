@@ -19,7 +19,6 @@ BkpFile is a command-line application for macOS and Linux that creates backups o
 ### For Contributors
 - Review [Immutable Specifications](immutable.md) first to understand constraints
 - Follow [Testing](testing.md) requirements for all changes
-- Ensure backward compatibility per [Immutable Specifications](immutable.md)
 
 ### Document Maintenance
 - Keep [Specification](specification.md) and [Immutable Specifications](immutable.md) in sync
@@ -27,18 +26,39 @@ BkpFile is a command-line application for macOS and Linux that creates backups o
 - Maintain test coverage as per [Testing](testing.md)
 - All changes must preserve existing functionality per [Immutable Specifications](immutable.md)
 
+## Configuration Discovery
+- Configuration files are discovered using a configurable search path
+- The search path is controlled by the `BKPFILE_CONFIG` environment variable
+- If `BKPFILE_CONFIG` is not set, the default search path is: `./.bkpfile.yml:~/.bkpfile.yml`
+- Configuration files are processed in order, with values from earlier files taking precedence
+- If multiple configuration files exist, settings in earlier files override settings in later files
+
+### Environment Variable: BKPFILE_CONFIG
+- Specifies a colon-separated list of configuration file paths to search
+- Example: `BKPFILE_CONFIG="/etc/bkpfile.yml:~/.config/bkpfile.yml:./.bkpfile.yml"`
+- Paths can be absolute or relative
+- Relative paths are resolved from the current working directory
+- Home directory (`~`) expansion is supported
+
 ## Configuration File
-- Configuration is stored in a YAML file named `.bkpfile.yaml` at the root of the directory containing the file to be backed up
-- If the file is not present, default values are used (see [Immutable Specifications](immutable.md#configuration-defaults))
+- Configuration is stored in YAML files with names specified by the configuration discovery system
+- If no configuration files are found, default values are used (see [Immutable Specifications](immutable.md#configuration-defaults))
+- Configuration files use the `.yml` extension by convention
 
 ### Configuration Options
-1. **Backup Directory Path**
+1. **Configuration Search Path**
+   - Controls which configuration files are searched
+   - Default: `./.bkpfile.yml:~/.bkpfile.yml`
+   - YAML key: `config`
+   - Example: `config: ./.bkpfile.yml:~/.bkpfile.yml`
+
+2. **Backup Directory Path**
    - Specifies where backups are stored
    - Default: `../.bkpfile` relative to current directory
    - YAML key: `backup_dir_path`
    - Backups maintain the source file's directory structure in the backup path
 
-2. **Use Current Directory Name**
+3. **Use Current Directory Name**
    - Controls whether to include current directory name in the backup path
    - Default: `true`
    - YAML key: `use_current_dir_name`

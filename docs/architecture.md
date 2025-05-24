@@ -7,6 +7,7 @@ This document describes the system architecture and design of the BkpFile applic
 ## Data Objects
 
 1. **Config**
+   - `Config`: string - Colon-separated list of configuration file paths to search
    - `BackupDirPath`: string - Path where backups are stored
    - `UseCurrentDirName`: bool - Whether to use current directory name in backup path
 
@@ -21,7 +22,14 @@ This document describes the system architecture and design of the BkpFile applic
 
 1. **Configuration Management**
    - `DefaultConfig() *Config`: Creates default configuration
-   - `LoadConfig(root string) (*Config, error)`: Loads config from YAML or uses defaults
+   - `LoadConfig(root string) (*Config, error)`: Loads config from YAML files using discovery path or uses defaults
+     - Reads `BKPFILE_CONFIG` environment variable for configuration search path
+     - Processes multiple configuration files with precedence rules
+     - Supports home directory expansion and path resolution
+   - `GetConfigSearchPath() []string`: Returns list of configuration file paths to search
+     - Reads `BKPFILE_CONFIG` environment variable
+     - Returns default path if environment variable not set
+     - Handles colon-separated path list parsing
 
 2. **File System Operations**
    - `CopyFile(src, dst string) error`: Creates an exact copy of the specified file

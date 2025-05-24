@@ -10,7 +10,7 @@ go install bkpfile@latest
 
 ## Configuration
 
-Create a `.bkpfile.yaml` file in the directory containing the file you want to backup:
+Create a `.bkpfile.yml` file in the directory containing the file you want to backup:
 
 ```yaml
 backup_dir_path: "../.bkpfile"  # Where backups are stored

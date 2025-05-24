@@ -9,7 +9,7 @@ This document maps code components to their corresponding architecture requireme
 ### Config
 **Implementation**: `config.go`
 **Specification Requirements**:
-- Configuration stored in YAML file `.bkpfile.yaml` at root directory
+- Configuration stored in YAML file `.bkpfile.yml` at root directory
 - Default values used if file not present
 - Fields:
   - `BackupDirPath`: `Config.BackupDirPath`
@@ -76,10 +76,10 @@ backup := &Backup{
 
 - `LoadConfig()`: `LoadConfig(root string) (*Config, error)`
   - Spec: "Loads config from YAML or uses defaults"
-  - Input: `root string` - Path to root directory containing .bkpfile.yaml
+  - Input: `root string` - Path to root directory containing .bkpfile.yml
   - Output: `(*Config, error)` - Returns config and any error encountered
   - Behavior:
-    - Attempts to read .bkpfile.yaml from root directory
+    - Attempts to read .bkpfile.yml from root directory
     - If file exists, merges with default values
     - If file doesn't exist, returns default config
     - Returns error if file exists but is invalid YAML

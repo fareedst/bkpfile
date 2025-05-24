@@ -34,10 +34,10 @@ func TestGenerateBackupName(t *testing.T) {
 		},
 		{
 			name:       "config file backup",
-			sourcePath: ".bkpfile.yaml",
+			sourcePath: ".bkpfile.yml",
 			timestamp:  "2025-05-12-13-49",
 			note:       "",
-			want:       ".bkpfile.yaml-2025-05-12-13-49",
+			want:       ".bkpfile.yml-2025-05-12-13-49",
 		},
 		{
 			name:       "test note format",
@@ -658,5 +658,230 @@ func TestDuplicateFileDetection(t *testing.T) {
 	if len(backups) > initialBackupCount {
 		t.Errorf("Expected no new backup to be created for identical file content, got %d backups (expected %d)",
 			len(backups), initialBackupCount)
+	}
+}
+
+func TestStandardConfigFile(t *testing.T) {
+	// Save original environment variable
+	originalEnv := os.Getenv("BKPFILE_CONFIG")
+	defer func() {
+		if originalEnv != "" {
+			os.Setenv("BKPFILE_CONFIG", originalEnv)
+		} else {
+			os.Unsetenv("BKPFILE_CONFIG")
+		}
+	}()
+
+	// Create temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "bkpfile-config-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Change to temp directory
+	originalWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Failed to change directory: %v", err)
+	}
+	defer os.Chdir(originalWd)
+
+	// Create .bkpfile.yml file
+	standardConfig := `backup_dir_path: "./standard-backup"
+use_current_dir_name: true`
+
+	if err := os.WriteFile(".bkpfile.yml", []byte(standardConfig), 0644); err != nil {
+		t.Fatalf("Failed to create config: %v", err)
+	}
+
+	// Clear environment variable to test default behavior
+	os.Unsetenv("BKPFILE_CONFIG")
+
+	// Load configuration (should find .bkpfile.yml file)
+	cfg, err := LoadConfig(".")
+	if err != nil {
+		t.Fatalf("LoadConfig() unexpected error: %v", err)
+	}
+
+	// Verify configuration is loaded
+	if cfg.BackupDirPath != "./standard-backup" {
+		t.Errorf("LoadConfig().BackupDirPath = %q, want %q", cfg.BackupDirPath, "./standard-backup")
+	}
+
+	if cfg.UseCurrentDirName != true {
+		t.Errorf("LoadConfig().UseCurrentDirName = %v, want %v", cfg.UseCurrentDirName, true)
+	}
+
+	// Create test file and backup
+	testFile := "config-test.txt"
+	if err := os.WriteFile(testFile, []byte("test content"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	// Create backup directory
+	if err := os.MkdirAll(cfg.BackupDirPath, 0755); err != nil {
+		t.Fatalf("Failed to create backup directory: %v", err)
+	}
+
+	// Mock time for consistent testing
+	mockTime := func() time.Time {
+		t, _ := time.Parse("2006-01-02-15-04", "2025-05-12-13-49")
+		return t
+	}
+
+	// Test backup creation with configuration
+	err = CreateBackupWithTime(cfg, testFile, "config_test", false, mockTime)
+	if err != nil {
+		t.Errorf("CreateBackupWithTime() with config error: %v", err)
+	}
+
+	// Verify backup was created
+	backups, err := ListBackups(cfg.BackupDirPath, testFile)
+	if err != nil {
+		t.Errorf("ListBackups() error: %v", err)
+	}
+
+	if len(backups) == 0 {
+		t.Error("No backups found after creation with config")
+	}
+}
+
+func TestConfigurationIntegration(t *testing.T) {
+	// Save original environment variable
+	originalEnv := os.Getenv("BKPFILE_CONFIG")
+	defer func() {
+		if originalEnv != "" {
+			os.Setenv("BKPFILE_CONFIG", originalEnv)
+		} else {
+			os.Unsetenv("BKPFILE_CONFIG")
+		}
+	}()
+
+	// Create temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "bkpfile-integration-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Change to temp directory for relative path testing
+	originalWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Failed to change directory: %v", err)
+	}
+	defer os.Chdir(originalWd)
+
+	// Create test file
+	testFile := "test.txt"
+	if err := os.WriteFile(testFile, []byte("test content"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	// Create custom configuration files
+	globalBackupDir := filepath.Join(tmpDir, "global-backup")
+	globalConfig := fmt.Sprintf(`backup_dir_path: "%s"
+use_current_dir_name: false`, globalBackupDir)
+
+	localConfig := `backup_dir_path: "./local-backup"
+use_current_dir_name: true`
+
+	if err := os.WriteFile("global.yml", []byte(globalConfig), 0644); err != nil {
+		t.Fatalf("Failed to create global config: %v", err)
+	}
+
+	if err := os.WriteFile("local.yml", []byte(localConfig), 0644); err != nil {
+		t.Fatalf("Failed to create local config: %v", err)
+	}
+
+	tests := []struct {
+		name           string
+		envValue       string
+		expectedBackup string
+		expectedUseDir bool
+	}{
+		{
+			name:           "backup with global config",
+			envValue:       "global.yml",
+			expectedBackup: globalBackupDir,
+			expectedUseDir: false,
+		},
+		{
+			name:           "backup with local config",
+			envValue:       "local.yml",
+			expectedBackup: "./local-backup",
+			expectedUseDir: true,
+		},
+		{
+			name:           "backup with config precedence",
+			envValue:       "global.yml:local.yml",
+			expectedBackup: globalBackupDir,
+			expectedUseDir: false,
+		},
+	}
+
+	// Mock time.Now for consistent timestamps
+	mockTime := func() time.Time {
+		t, _ := time.Parse("2006-01-02-15-04", "2025-05-12-13-49")
+		return t
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set environment variable
+			os.Setenv("BKPFILE_CONFIG", tt.envValue)
+
+			// Load configuration
+			cfg, err := LoadConfig(".")
+			if err != nil {
+				t.Errorf("LoadConfig() unexpected error: %v", err)
+				return
+			}
+
+			// Verify configuration values
+			if cfg.BackupDirPath != tt.expectedBackup {
+				t.Errorf("LoadConfig().BackupDirPath = %q, want %q", cfg.BackupDirPath, tt.expectedBackup)
+			}
+
+			if cfg.UseCurrentDirName != tt.expectedUseDir {
+				t.Errorf("LoadConfig().UseCurrentDirName = %v, want %v", cfg.UseCurrentDirName, tt.expectedUseDir)
+			}
+
+			// Create backup directory for the test
+			if err := os.MkdirAll(cfg.BackupDirPath, 0755); err != nil {
+				t.Errorf("Failed to create backup directory: %v", err)
+				return
+			}
+
+			// Test dry-run with custom configuration
+			err = CreateBackupWithTime(cfg, testFile, "config_test", true, mockTime)
+			if err != nil {
+				t.Errorf("CreateBackupWithTime() dry-run error: %v", err)
+			}
+
+			// Test actual backup creation with custom configuration
+			err = CreateBackupWithTime(cfg, testFile, "config_test", false, mockTime)
+			if err != nil {
+				t.Errorf("CreateBackupWithTime() error: %v", err)
+			}
+
+			// Verify backup was created in the correct location
+			backups, err := ListBackups(cfg.BackupDirPath, testFile)
+			if err != nil {
+				t.Errorf("ListBackups() error: %v", err)
+			}
+
+			if len(backups) == 0 {
+				t.Error("No backups found after creation with custom config")
+			}
+
+			// Clean up backup directory for next test
+			os.RemoveAll(cfg.BackupDirPath)
+		})
 	}
 }

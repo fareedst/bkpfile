@@ -31,7 +31,9 @@ This document contains specifications that MUST NOT be changed without a major v
    - This backup creation logic must remain unchanged
 
 ## Configuration Defaults
-- Configuration file: `.bkpfile.yaml` at root of directory containing file to be backed up
+- Configuration discovery uses `BKPFILE_CONFIG` environment variable to specify search path
+- Default configuration search path: `./.bkpfile.yml:~/.bkpfile.yml` (if `BKPFILE_CONFIG` not set)
+- Configuration files are processed in order with earlier files taking precedence
 - Default backup directory: `../.bkpfile` relative to current directory
 - Default use_current_dir_name: true
 - These configuration defaults must never be changed without explicit user override
