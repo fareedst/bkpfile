@@ -39,7 +39,7 @@ This document contains specifications that MUST NOT be changed without a major v
 
 ## Configuration Defaults
 - Configuration discovery uses `BKPFILE_CONFIG` environment variable to specify search path
-- Default configuration search path: `./.bkpfile.yml:~/.bkpfile.yml` (if `BKPFILE_CONFIG` not set)
+- Default configuration search path is hard-coded as `./.bkpfile.yml:~/.bkpfile.yml` (if `BKPFILE_CONFIG` not set)
 - Configuration files are processed in order with earlier files taking precedence
 - Default backup directory: `../.bkpfile` relative to current directory
 - Default use_current_dir_name: true

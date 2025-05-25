@@ -161,7 +161,7 @@ backup := &Backup{
   - Output: `error` - Any error encountered
   - Behavior:
     - Processes configuration files from `BKPFILE_CONFIG` environment variable
-    - If `BKPFILE_CONFIG` not set, uses default search path
+    - If `BKPFILE_CONFIG` not set, uses hard-coded default search path: `./.bkpfile.yml:~/.bkpfile.yml`
     - Shows each configuration value with name, computed value, and source file
     - Displays format: `name: value (source: source_file)`
     - Default values show source as "default"

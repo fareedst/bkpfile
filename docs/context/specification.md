@@ -29,7 +29,7 @@ BkpFile is a command-line application for macOS and Linux that creates backups o
 ## Configuration Discovery
 - Configuration files are discovered using a configurable search path
 - The search path is controlled by the `BKPFILE_CONFIG` environment variable
-- If `BKPFILE_CONFIG` is not set, the default search path is: `./.bkpfile.yml:~/.bkpfile.yml`
+- If `BKPFILE_CONFIG` is not set, the default search path is hard-coded as: `./.bkpfile.yml:~/.bkpfile.yml`
 - Configuration files are processed in order, with values from earlier files taking precedence
 - If multiple configuration files exist, settings in earlier files override settings in later files
 
@@ -46,25 +46,19 @@ BkpFile is a command-line application for macOS and Linux that creates backups o
 - Configuration files use the `.yml` extension by convention
 
 ### Configuration Options
-1. **Configuration Search Path**
-   - Controls which configuration files are searched
-   - Default: `./.bkpfile.yml:~/.bkpfile.yml`
-   - YAML key: `config`
-   - Example: `config: ./.bkpfile.yml:~/.bkpfile.yml`
-
-2. **Backup Directory Path**
+1. **Backup Directory Path**
    - Specifies where backups are stored
    - Default: `../.bkpfile` relative to current directory
    - YAML key: `backup_dir_path`
    - Backups maintain the source file's directory structure in the backup path
 
-3. **Use Current Directory Name**
+2. **Use Current Directory Name**
    - Controls whether to include current directory name in the backup path
    - Default: `true`
    - YAML key: `use_current_dir_name`
    - Example: With file 'cmd/bkpfile/main.go', backup path becomes '../.bkpfile/cmd/bkpfile/main.go-2025-05-12-13-49'
 
-4. **Status Code Configuration**
+3. **Status Code Configuration**
    - Configures exit status codes returned for different application conditions
    - Status codes have specific defaults if not specified (see [Immutable Specifications](immutable.md#configuration-defaults))
    - YAML keys for status codes:

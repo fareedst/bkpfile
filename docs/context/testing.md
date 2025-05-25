@@ -19,12 +19,13 @@ This document outlines the testing requirements, architecture, and approach for 
   - Tests status code configuration with custom values
 - `TestGetConfigSearchPath`: Tests configuration path discovery
   - Validates environment variable parsing
-  - Tests default path when environment variable not set
+  - Tests hard-coded default path when environment variable not set
   - Tests colon-separated path list parsing
   - Tests home directory expansion
 - `TestDisplayConfig`: Tests configuration value display
   - Validates configuration value computation and source tracking
   - Tests environment variable processing for configuration paths
+  - Tests hard-coded default path handling
   - Tests default value handling and source attribution
   - Tests output format with name, value, and source
   - Tests display of status code configuration values
@@ -64,6 +65,7 @@ This document outlines the testing requirements, architecture, and approach for 
 - `TestConfigurationDiscovery`: Tests configuration file discovery
   - Tests multiple configuration files with different precedence
   - Tests environment variable override behavior
+  - Tests hard-coded default path behavior
   - Tests missing configuration files handling
   - Tests invalid configuration file handling
   - Tests configuration merging with defaults
@@ -105,6 +107,7 @@ This document outlines the testing requirements, architecture, and approach for 
     - Display config with values from single configuration file
     - Display config with values from multiple configuration files
     - Display config with `BKPFILE_CONFIG` environment variable set
+    - Display config with hard-coded default path when environment variable not set
     - Display config with invalid configuration files (error handling)
     - Display config with custom status code values
     - Verify application exits after displaying configuration
@@ -124,6 +127,7 @@ This document outlines the testing requirements, architecture, and approach for 
 - `TestConfigurationIntegration`: Tests configuration discovery in full application context
   - Tests backup operations with custom configuration paths
   - Tests environment variable override in real scenarios
+  - Tests hard-coded default path behavior
   - Tests configuration precedence with actual file operations
   - Tests status code configuration in real application scenarios
   - Test cases:

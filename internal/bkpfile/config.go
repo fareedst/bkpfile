@@ -12,10 +12,6 @@ import (
 // Config represents the application configuration
 // Architecture: Data Objects - Config
 type Config struct {
-	// Config specifies the colon-separated list of configuration file paths to search
-	// Architecture: Config.Config
-	Config string `yaml:"config"`
-
 	// BackupDirPath specifies where backups are stored
 	// Architecture: Config.BackupDirPath
 	BackupDirPath string `yaml:"backup_dir_path"`
@@ -71,7 +67,6 @@ type ConfigValue struct {
 func DefaultConfig() *Config {
 	return &Config{
 		BackupDirPath:                         "../.bkpfile",
-		Config:                                "./.bkpfile.yml:~/.bkpfile.yml",
 		StatusConfigError:                     10,
 		StatusCreatedBackup:                   0,
 		StatusDiskFull:                        30,
@@ -95,7 +90,7 @@ func GetConfigSearchPath() []string {
 		// Split on colon to get path list
 		paths = strings.Split(envConfig, ":")
 	} else {
-		// Use default path list
+		// Use hard-coded default path list
 		paths = []string{"./.bkpfile.yml", "~/.bkpfile.yml"}
 	}
 
@@ -121,7 +116,6 @@ func DisplayConfig() error {
 	defaultCfg := DefaultConfig()
 	configValues := []ConfigValue{
 		{Name: "backup_dir_path", Value: defaultCfg.BackupDirPath, Source: "default"},
-		{Name: "config", Value: defaultCfg.Config, Source: "default"},
 		{Name: "use_current_dir_name", Value: fmt.Sprintf("%t", defaultCfg.UseCurrentDirName), Source: "default"},
 		{Name: "status_config_error", Value: fmt.Sprintf("%d", defaultCfg.StatusConfigError), Source: "default"},
 		{Name: "status_created_backup", Value: fmt.Sprintf("%d", defaultCfg.StatusCreatedBackup), Source: "default"},
@@ -186,19 +180,11 @@ func DisplayConfig() error {
 			}
 		}
 
-		if _, exists := yamlData["config"]; exists && tempCfg.Config != "" {
-			// Update only if not already set by a previous (higher precedence) file
-			if configValues[1].Source == "default" {
-				configValues[1].Value = tempCfg.Config
-				configValues[1].Source = originalPath
-			}
-		}
-
 		if _, exists := yamlData["use_current_dir_name"]; exists {
 			// Update only if not already set by a previous (higher precedence) file
-			if configValues[2].Source == "default" {
-				configValues[2].Value = fmt.Sprintf("%t", tempCfg.UseCurrentDirName)
-				configValues[2].Source = originalPath
+			if configValues[1].Source == "default" {
+				configValues[1].Value = fmt.Sprintf("%t", tempCfg.UseCurrentDirName)
+				configValues[1].Source = originalPath
 			}
 		}
 
@@ -208,14 +194,14 @@ func DisplayConfig() error {
 			index   int
 			value   int
 		}{
-			{"status_config_error", 3, tempCfg.StatusConfigError},
-			{"status_created_backup", 4, tempCfg.StatusCreatedBackup},
-			{"status_disk_full", 5, tempCfg.StatusDiskFull},
-			{"status_failed_to_create_backup_directory", 6, tempCfg.StatusFailedToCreateBackupDirectory},
-			{"status_file_is_identical_to_existing_backup", 7, tempCfg.StatusFileIsIdenticalToExistingBackup},
-			{"status_file_not_found", 8, tempCfg.StatusFileNotFound},
-			{"status_invalid_file_type", 9, tempCfg.StatusInvalidFileType},
-			{"status_permission_denied", 10, tempCfg.StatusPermissionDenied},
+			{"status_config_error", 2, tempCfg.StatusConfigError},
+			{"status_created_backup", 3, tempCfg.StatusCreatedBackup},
+			{"status_disk_full", 4, tempCfg.StatusDiskFull},
+			{"status_failed_to_create_backup_directory", 5, tempCfg.StatusFailedToCreateBackupDirectory},
+			{"status_file_is_identical_to_existing_backup", 6, tempCfg.StatusFileIsIdenticalToExistingBackup},
+			{"status_file_not_found", 7, tempCfg.StatusFileNotFound},
+			{"status_invalid_file_type", 8, tempCfg.StatusInvalidFileType},
+			{"status_permission_denied", 9, tempCfg.StatusPermissionDenied},
 		}
 
 		for _, field := range statusFields {
@@ -279,9 +265,6 @@ func LoadConfig(root string) (*Config, error) {
 		// Merge configuration with precedence (only update fields that are explicitly set)
 		if !foundConfig {
 			// First config file found sets values for fields that are explicitly present
-			if _, exists := yamlData["config"]; exists && tempCfg.Config != "" {
-				cfg.Config = tempCfg.Config
-			}
 			if _, exists := yamlData["backup_dir_path"]; exists && tempCfg.BackupDirPath != "" {
 				// Expand home directory in backup path
 				backupPath := tempCfg.BackupDirPath
