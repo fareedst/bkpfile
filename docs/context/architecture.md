@@ -10,6 +10,14 @@ This document describes the system architecture and design of the BkpFile applic
    - `Config`: string - Colon-separated list of configuration file paths to search
    - `BackupDirPath`: string - Path where backups are stored
    - `UseCurrentDirName`: bool - Whether to use current directory name in backup path
+   - `StatusCreatedBackup`: int - Exit code when a new backup is successfully created
+   - `StatusFailedToCreateBackupDirectory`: int - Exit code when backup directory creation fails
+   - `StatusFileIsIdenticalToExistingBackup`: int - Exit code when file is identical to most recent backup
+   - `StatusFileNotFound`: int - Exit code when source file does not exist
+   - `StatusInvalidFileType`: int - Exit code when source file is not a regular file
+   - `StatusPermissionDenied`: int - Exit code when file access is denied
+   - `StatusDiskFull`: int - Exit code when disk space is insufficient
+   - `StatusConfigError`: int - Exit code when configuration is invalid
 
 2. **ConfigValue**
    - `Name`: string - Configuration parameter name
@@ -83,11 +91,19 @@ This document describes the system architecture and design of the BkpFile applic
      2. Validate source file exists and is regular
      3. Convert file path to relative path if needed
      4. Compare file with most recent backup
-        - If identical, report existing backup name and exit
+        - If identical, report existing backup name and exit with `cfg.StatusFileIsIdenticalToExistingBackup`
         - If different, proceed with backup creation
      5. Generate backup name using base filename
      6. Create backup directory structure
      7. Create file copy (or simulate in dry-run)
+     8. Exit with `cfg.StatusCreatedBackup` on successful backup creation
+     - Error handling uses configured status codes:
+       - File not found: exit with `cfg.StatusFileNotFound`
+       - Invalid file type: exit with `cfg.StatusInvalidFileType`
+       - Permission denied: exit with `cfg.StatusPermissionDenied`
+       - Disk full: exit with `cfg.StatusDiskFull`
+       - Failed to create backup directory: exit with `cfg.StatusFailedToCreateBackupDirectory`
+       - Configuration error: exit with `cfg.StatusConfigError`
 
    - For listing backups:
      1. Load config

@@ -43,6 +43,15 @@ This document contains specifications that MUST NOT be changed without a major v
 - Configuration files are processed in order with earlier files taking precedence
 - Default backup directory: `../.bkpfile` relative to current directory
 - Default use_current_dir_name: true
+- Default status codes: All status codes default to `0` (success) if not specified
+  - `status_config_error`: 10
+  - `status_created_backup`: 0
+  - `status_disk_full`: 30
+  - `status_failed_to_create_backup_directory`: 31
+  - `status_file_is_identical_to_existing_backup`: 0
+  - `status_file_not_found`: 20
+  - `status_invalid_file_type`: 21
+  - `status_permission_denied`: 22
 - These configuration defaults must never be changed without explicit user override
 
 ## Platform Compatibility

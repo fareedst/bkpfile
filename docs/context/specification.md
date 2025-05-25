@@ -64,6 +64,30 @@ BkpFile is a command-line application for macOS and Linux that creates backups o
    - YAML key: `use_current_dir_name`
    - Example: With file 'cmd/bkpfile/main.go', backup path becomes '../.bkpfile/cmd/bkpfile/main.go-2025-05-12-13-49'
 
+4. **Status Code Configuration**
+   - Configures exit status codes returned for different application conditions
+   - Status codes have specific defaults if not specified (see [Immutable Specifications](immutable.md#configuration-defaults))
+   - YAML keys for status codes:
+     - `status_created_backup`: Exit code when a new backup is successfully created (default: 0)
+     - `status_failed_to_create_backup_directory`: Exit code when backup directory creation fails (default: 31)
+     - `status_file_is_identical_to_existing_backup`: Exit code when file is identical to most recent backup (default: 0)
+     - `status_file_not_found`: Exit code when source file does not exist (default: 20)
+     - `status_invalid_file_type`: Exit code when source file is not a regular file (default: 21)
+     - `status_permission_denied`: Exit code when file access is denied (default: 22)
+     - `status_disk_full`: Exit code when disk space is insufficient (default: 30)
+     - `status_config_error`: Exit code when configuration is invalid (default: 10)
+   - Example configuration:
+     ```yaml
+     status_created_backup: 0
+     status_failed_to_create_backup_directory: 31
+     status_file_is_identical_to_existing_backup: 0
+     status_file_not_found: 20
+     status_invalid_file_type: 21
+     status_permission_denied: 22
+     status_disk_full: 30
+     status_config_error: 10
+     ```
+
 ## Commands
 
 ### 1. List Backups

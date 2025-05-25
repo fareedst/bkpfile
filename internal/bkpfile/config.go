@@ -23,6 +23,31 @@ type Config struct {
 	// UseCurrentDirName controls whether to include current directory name in backup path
 	// Architecture: Config.UseCurrentDirName
 	UseCurrentDirName bool `yaml:"use_current_dir_name"`
+
+	// Status code configuration fields
+	// Architecture: Config.StatusCreatedBackup
+	StatusCreatedBackup int `yaml:"status_created_backup"`
+
+	// Architecture: Config.StatusFailedToCreateBackupDirectory
+	StatusFailedToCreateBackupDirectory int `yaml:"status_failed_to_create_backup_directory"`
+
+	// Architecture: Config.StatusFileIsIdenticalToExistingBackup
+	StatusFileIsIdenticalToExistingBackup int `yaml:"status_file_is_identical_to_existing_backup"`
+
+	// Architecture: Config.StatusFileNotFound
+	StatusFileNotFound int `yaml:"status_file_not_found"`
+
+	// Architecture: Config.StatusInvalidFileType
+	StatusInvalidFileType int `yaml:"status_invalid_file_type"`
+
+	// Architecture: Config.StatusPermissionDenied
+	StatusPermissionDenied int `yaml:"status_permission_denied"`
+
+	// Architecture: Config.StatusDiskFull
+	StatusDiskFull int `yaml:"status_disk_full"`
+
+	// Architecture: Config.StatusConfigError
+	StatusConfigError int `yaml:"status_config_error"`
 }
 
 // ConfigValue represents a configuration parameter with its computed value and source
@@ -45,9 +70,17 @@ type ConfigValue struct {
 // Architecture: Core Functions - Configuration Management - DefaultConfig
 func DefaultConfig() *Config {
 	return &Config{
-		Config:            "./.bkpfile.yml:~/.bkpfile.yml",
-		BackupDirPath:     "../.bkpfile",
-		UseCurrentDirName: true,
+		BackupDirPath:                         "../.bkpfile",
+		Config:                                "./.bkpfile.yml:~/.bkpfile.yml",
+		StatusConfigError:                     10,
+		StatusCreatedBackup:                   0,
+		StatusDiskFull:                        30,
+		StatusFailedToCreateBackupDirectory:   31,
+		StatusFileIsIdenticalToExistingBackup: 0,
+		StatusFileNotFound:                    20,
+		StatusInvalidFileType:                 21,
+		StatusPermissionDenied:                22,
+		UseCurrentDirName:                     true,
 	}
 }
 
@@ -88,8 +121,16 @@ func DisplayConfig() error {
 	defaultCfg := DefaultConfig()
 	configValues := []ConfigValue{
 		{Name: "backup_dir_path", Value: defaultCfg.BackupDirPath, Source: "default"},
-		{Name: "use_current_dir_name", Value: fmt.Sprintf("%t", defaultCfg.UseCurrentDirName), Source: "default"},
 		{Name: "config", Value: defaultCfg.Config, Source: "default"},
+		{Name: "use_current_dir_name", Value: fmt.Sprintf("%t", defaultCfg.UseCurrentDirName), Source: "default"},
+		{Name: "status_config_error", Value: fmt.Sprintf("%d", defaultCfg.StatusConfigError), Source: "default"},
+		{Name: "status_created_backup", Value: fmt.Sprintf("%d", defaultCfg.StatusCreatedBackup), Source: "default"},
+		{Name: "status_disk_full", Value: fmt.Sprintf("%d", defaultCfg.StatusDiskFull), Source: "default"},
+		{Name: "status_failed_to_create_backup_directory", Value: fmt.Sprintf("%d", defaultCfg.StatusFailedToCreateBackupDirectory), Source: "default"},
+		{Name: "status_file_is_identical_to_existing_backup", Value: fmt.Sprintf("%d", defaultCfg.StatusFileIsIdenticalToExistingBackup), Source: "default"},
+		{Name: "status_file_not_found", Value: fmt.Sprintf("%d", defaultCfg.StatusFileNotFound), Source: "default"},
+		{Name: "status_invalid_file_type", Value: fmt.Sprintf("%d", defaultCfg.StatusInvalidFileType), Source: "default"},
+		{Name: "status_permission_denied", Value: fmt.Sprintf("%d", defaultCfg.StatusPermissionDenied), Source: "default"},
 	}
 
 	// Process configuration files in order with precedence rules
@@ -145,19 +186,45 @@ func DisplayConfig() error {
 			}
 		}
 
-		if _, exists := yamlData["use_current_dir_name"]; exists {
+		if _, exists := yamlData["config"]; exists && tempCfg.Config != "" {
 			// Update only if not already set by a previous (higher precedence) file
 			if configValues[1].Source == "default" {
-				configValues[1].Value = fmt.Sprintf("%t", tempCfg.UseCurrentDirName)
+				configValues[1].Value = tempCfg.Config
 				configValues[1].Source = originalPath
 			}
 		}
 
-		if _, exists := yamlData["config"]; exists && tempCfg.Config != "" {
+		if _, exists := yamlData["use_current_dir_name"]; exists {
 			// Update only if not already set by a previous (higher precedence) file
 			if configValues[2].Source == "default" {
-				configValues[2].Value = tempCfg.Config
+				configValues[2].Value = fmt.Sprintf("%t", tempCfg.UseCurrentDirName)
 				configValues[2].Source = originalPath
+			}
+		}
+
+		// Handle status code configuration fields
+		statusFields := []struct {
+			yamlKey string
+			index   int
+			value   int
+		}{
+			{"status_config_error", 3, tempCfg.StatusConfigError},
+			{"status_created_backup", 4, tempCfg.StatusCreatedBackup},
+			{"status_disk_full", 5, tempCfg.StatusDiskFull},
+			{"status_failed_to_create_backup_directory", 6, tempCfg.StatusFailedToCreateBackupDirectory},
+			{"status_file_is_identical_to_existing_backup", 7, tempCfg.StatusFileIsIdenticalToExistingBackup},
+			{"status_file_not_found", 8, tempCfg.StatusFileNotFound},
+			{"status_invalid_file_type", 9, tempCfg.StatusInvalidFileType},
+			{"status_permission_denied", 10, tempCfg.StatusPermissionDenied},
+		}
+
+		for _, field := range statusFields {
+			if _, exists := yamlData[field.yamlKey]; exists {
+				// Update only if not already set by a previous (higher precedence) file
+				if configValues[field.index].Source == "default" {
+					configValues[field.index].Value = fmt.Sprintf("%d", field.value)
+					configValues[field.index].Source = originalPath
+				}
 			}
 		}
 	}
@@ -228,6 +295,33 @@ func LoadConfig(root string) (*Config, error) {
 			if _, exists := yamlData["use_current_dir_name"]; exists {
 				cfg.UseCurrentDirName = tempCfg.UseCurrentDirName
 			}
+
+			// Handle status code configuration fields
+			if _, exists := yamlData["status_created_backup"]; exists {
+				cfg.StatusCreatedBackup = tempCfg.StatusCreatedBackup
+			}
+			if _, exists := yamlData["status_failed_to_create_backup_directory"]; exists {
+				cfg.StatusFailedToCreateBackupDirectory = tempCfg.StatusFailedToCreateBackupDirectory
+			}
+			if _, exists := yamlData["status_file_is_identical_to_existing_backup"]; exists {
+				cfg.StatusFileIsIdenticalToExistingBackup = tempCfg.StatusFileIsIdenticalToExistingBackup
+			}
+			if _, exists := yamlData["status_file_not_found"]; exists {
+				cfg.StatusFileNotFound = tempCfg.StatusFileNotFound
+			}
+			if _, exists := yamlData["status_invalid_file_type"]; exists {
+				cfg.StatusInvalidFileType = tempCfg.StatusInvalidFileType
+			}
+			if _, exists := yamlData["status_permission_denied"]; exists {
+				cfg.StatusPermissionDenied = tempCfg.StatusPermissionDenied
+			}
+			if _, exists := yamlData["status_disk_full"]; exists {
+				cfg.StatusDiskFull = tempCfg.StatusDiskFull
+			}
+			if _, exists := yamlData["status_config_error"]; exists {
+				cfg.StatusConfigError = tempCfg.StatusConfigError
+			}
+
 			foundConfig = true
 		} else {
 			// Subsequent config files only override if the field is explicitly set
@@ -272,6 +366,33 @@ func LoadConfig(root string) (*Config, error) {
 			if _, exists := yamlData["use_current_dir_name"]; exists {
 				cfg.UseCurrentDirName = tempCfg.UseCurrentDirName
 			}
+
+			// Handle status code configuration fields
+			if _, exists := yamlData["status_created_backup"]; exists {
+				cfg.StatusCreatedBackup = tempCfg.StatusCreatedBackup
+			}
+			if _, exists := yamlData["status_failed_to_create_backup_directory"]; exists {
+				cfg.StatusFailedToCreateBackupDirectory = tempCfg.StatusFailedToCreateBackupDirectory
+			}
+			if _, exists := yamlData["status_file_is_identical_to_existing_backup"]; exists {
+				cfg.StatusFileIsIdenticalToExistingBackup = tempCfg.StatusFileIsIdenticalToExistingBackup
+			}
+			if _, exists := yamlData["status_file_not_found"]; exists {
+				cfg.StatusFileNotFound = tempCfg.StatusFileNotFound
+			}
+			if _, exists := yamlData["status_invalid_file_type"]; exists {
+				cfg.StatusInvalidFileType = tempCfg.StatusInvalidFileType
+			}
+			if _, exists := yamlData["status_permission_denied"]; exists {
+				cfg.StatusPermissionDenied = tempCfg.StatusPermissionDenied
+			}
+			if _, exists := yamlData["status_disk_full"]; exists {
+				cfg.StatusDiskFull = tempCfg.StatusDiskFull
+			}
+			if _, exists := yamlData["status_config_error"]; exists {
+				cfg.StatusConfigError = tempCfg.StatusConfigError
+			}
+
 			foundConfig = true
 		}
 	}

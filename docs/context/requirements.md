@@ -20,6 +20,38 @@ This document maps code components to their corresponding architecture requireme
     - Spec: "Controls whether to include current directory name in backup path"
     - Default: true
     - YAML key: "use_current_dir_name"
+  - `StatusCreatedBackup`: `Config.StatusCreatedBackup`
+    - Spec: "Exit code when a new backup is successfully created"
+    - Default: 0
+    - YAML key: "status_created_backup"
+  - `StatusFailedToCreateBackupDirectory`: `Config.StatusFailedToCreateBackupDirectory`
+    - Spec: "Exit code when backup directory creation fails"
+    - Default: 31
+    - YAML key: "status_failed_to_create_backup_directory"
+  - `StatusFileIsIdenticalToExistingBackup`: `Config.StatusFileIsIdenticalToExistingBackup`
+    - Spec: "Exit code when file is identical to most recent backup"
+    - Default: 0
+    - YAML key: "status_file_is_identical_to_existing_backup"
+  - `StatusFileNotFound`: `Config.StatusFileNotFound`
+    - Spec: "Exit code when source file does not exist"
+    - Default: 20
+    - YAML key: "status_file_not_found"
+  - `StatusInvalidFileType`: `Config.StatusInvalidFileType`
+    - Spec: "Exit code when source file is not a regular file"
+    - Default: 21
+    - YAML key: "status_invalid_file_type"
+  - `StatusPermissionDenied`: `Config.StatusPermissionDenied`
+    - Spec: "Exit code when file access is denied"
+    - Default: 22
+    - YAML key: "status_permission_denied"
+  - `StatusDiskFull`: `Config.StatusDiskFull`
+    - Spec: "Exit code when disk space is insufficient"
+    - Default: 30
+    - YAML key: "status_disk_full"
+  - `StatusConfigError`: `Config.StatusConfigError`
+    - Spec: "Exit code when configuration is invalid"
+    - Default: 10
+    - YAML key: "status_config_error"
 
 **Example Usage**:
 ```go
@@ -31,6 +63,12 @@ if err != nil {
 
 // Access configuration values
 backupPath := cfg.BackupDirPath
+useCurrentDir := cfg.UseCurrentDirName
+
+// Access status code configuration
+createdBackupStatus := cfg.StatusCreatedBackup
+identicalFileStatus := cfg.StatusFileIsIdenticalToExistingBackup
+fileNotFoundStatus := cfg.StatusFileNotFound
 ```
 
 ### ConfigValue
@@ -94,6 +132,14 @@ backup := &Backup{
   - Default Values:
     - BackupDirPath: "../.bkpfile"
     - UseCurrentDirName: true
+    - StatusCreatedBackup: 0
+    - StatusFailedToCreateBackupDirectory: 31
+    - StatusFileIsIdenticalToExistingBackup: 0
+    - StatusFileNotFound: 20
+    - StatusInvalidFileType: 21
+    - StatusPermissionDenied: 22
+    - StatusDiskFull: 30
+    - StatusConfigError: 10
 
 - `LoadConfig()`: `LoadConfig(root string) (*Config, error)`
   - Spec: "Loads config from YAML or uses defaults"
@@ -219,13 +265,16 @@ if err != nil {
     - Creates backup directory if needed
     - Generates backup name using base filename
     - Copies file (or simulates copy in dry-run)
+    - Uses configured status codes for different exit conditions
   - Error Cases:
-    - Invalid configuration
-    - File not found
-    - File is not a regular file
-    - Permission denied
-    - Disk full
-    - Other file system errors
+    - Invalid configuration (exits with `cfg.StatusConfigError`)
+    - File not found (exits with `cfg.StatusFileNotFound`)
+    - File is not a regular file (exits with `cfg.StatusInvalidFileType`)
+    - Permission denied (exits with `cfg.StatusPermissionDenied`)
+    - Disk full (exits with `cfg.StatusDiskFull`)
+    - Failed to create backup directory (exits with `cfg.StatusFailedToCreateBackupDirectory`)
+    - File identical to existing backup (exits with `cfg.StatusFileIsIdenticalToExistingBackup`)
+    - Successful backup creation (exits with `cfg.StatusCreatedBackup`)
 
 - `CreateBackupWithTime(cfg *Config, filePath string, note string, dryRun bool, now func() time.Time) error`
   - Spec: "Test helper for creating backups with custom time"
@@ -282,6 +331,7 @@ err = CreateBackupWithTime(cfg, "/path/to/file.txt", "test_backup", false, func(
   - Output: Shows backup path (relative to current directory) and creation time
   - When a new backup is created: Displays "Created backup: [PATH]"
   - When file is identical to existing backup: Displays "File is identical to existing backup: [PATH]"
+  - Uses configured status codes for application exit
 
 ### Workflow Implementation
 **Implementation**: `backup.go`
@@ -293,11 +343,12 @@ err = CreateBackupWithTime(cfg, "/path/to/file.txt", "test_backup", false, func(
     2. Validate source file exists and is regular
     3. Convert file path to relative path if needed
     4. Compare file with most recent backup
-       - If identical, report existing backup name and exit
+       - If identical, report existing backup name and exit with `cfg.StatusFileIsIdenticalToExistingBackup`
        - If different, proceed with backup creation
     5. Generate backup name using base filename
     6. Create backup directory structure
     7. Create file copy (or simulate in dry-run)
+    8. Exit with `cfg.StatusCreatedBackup` on success
 
 - Backup listing workflow: `ListBackups()`
   - Spec: "Displays all backups for the specified file"
@@ -333,4 +384,4 @@ err = CreateBackupWithTime(cfg, "/path/to/file.txt", "test_backup", false, func(
   - Spec: "Performs byte-by-byte comparison of files"
   - Input: Source file path and most recent backup path
   - Output: Boolean indicating if files are identical
-  - Behavior: Compares files byte by byte to detect changes 
+  - Behavior: Compares files byte by byte to detect changes

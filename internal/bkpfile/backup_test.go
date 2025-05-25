@@ -173,8 +173,28 @@ func TestCreateBackup(t *testing.T) {
 			}
 
 			err := CreateBackupWithTime(cfg, tt.filePath, tt.note, tt.dryRun, mockTime)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("CreateBackup() error = %v, wantErr %v", err, tt.wantErr)
+
+			// Check for BackupError and determine if it's a success or failure
+			if backupErr, ok := err.(*BackupError); ok {
+				isSuccess := backupErr.Message == "backup created successfully" ||
+					backupErr.Message == "dry run completed" ||
+					backupErr.Message == "file is identical to existing backup"
+
+				if tt.wantErr && isSuccess {
+					t.Errorf("CreateBackup() expected error but got success: %v", backupErr.Message)
+				} else if !tt.wantErr && !isSuccess {
+					t.Errorf("CreateBackup() expected success but got error: %v", backupErr.Message)
+				}
+			} else if err != nil {
+				// Regular error (not BackupError)
+				if !tt.wantErr {
+					t.Errorf("CreateBackup() unexpected error = %v", err)
+				}
+			} else {
+				// No error at all
+				if tt.wantErr {
+					t.Errorf("CreateBackup() expected error but got nil")
+				}
 			}
 
 			if !tt.dryRun && !tt.wantErr {
@@ -404,8 +424,19 @@ func TestRelativePathDisplay(t *testing.T) {
 			defer os.Chdir(oldWd)
 
 			// Create backup
-			if err := CreateBackupWithTime(cfg, tt.filePath, tt.note, tt.dryRun, timeNow); err != nil {
-				t.Fatalf("Failed to create backup: %v", err)
+			err = CreateBackupWithTime(cfg, tt.filePath, tt.note, tt.dryRun, timeNow)
+			if err != nil {
+				// Check if it's a BackupError with a success message
+				if backupErr, ok := err.(*BackupError); ok {
+					isSuccess := backupErr.Message == "backup created successfully" ||
+						backupErr.Message == "dry run completed" ||
+						backupErr.Message == "file is identical to existing backup"
+					if !isSuccess {
+						t.Fatalf("Failed to create backup: %v", backupErr.Message)
+					}
+				} else {
+					t.Fatalf("Failed to create backup: %v", err)
+				}
 			}
 
 			// Get backup path
@@ -537,7 +568,17 @@ func TestBackupOutputMessage(t *testing.T) {
 			// Create backup
 			err := CreateBackupWithTime(cfg, testFile, tt.note, false, mockTime)
 			if err != nil {
-				t.Fatalf("Failed to create backup: %v", err)
+				// Check if it's a BackupError with a success message
+				if backupErr, ok := err.(*BackupError); ok {
+					isSuccess := backupErr.Message == "backup created successfully" ||
+						backupErr.Message == "dry run completed" ||
+						backupErr.Message == "file is identical to existing backup"
+					if !isSuccess {
+						t.Fatalf("Failed to create backup: %v", backupErr.Message)
+					}
+				} else {
+					t.Fatalf("Failed to create backup: %v", err)
+				}
 			}
 
 			// Restore stdout and get captured output
@@ -604,7 +645,17 @@ func TestDuplicateFileDetection(t *testing.T) {
 	firstNote := "first_note"
 	err = CreateBackupWithTime(cfg, testFile, firstNote, false, mockTime)
 	if err != nil {
-		t.Fatalf("Failed to create initial backup: %v", err)
+		// Check if it's a BackupError with a success message
+		if backupErr, ok := err.(*BackupError); ok {
+			isSuccess := backupErr.Message == "backup created successfully" ||
+				backupErr.Message == "dry run completed" ||
+				backupErr.Message == "file is identical to existing backup"
+			if !isSuccess {
+				t.Fatalf("Failed to create initial backup: %v", backupErr.Message)
+			}
+		} else {
+			t.Fatalf("Failed to create initial backup: %v", err)
+		}
 	}
 
 	// Count backups after first creation
@@ -628,7 +679,17 @@ func TestDuplicateFileDetection(t *testing.T) {
 	// Attempt to create a backup with different note
 	err = CreateBackupWithTime(cfg, testFile, secondNote, false, mockTime)
 	if err != nil {
-		t.Fatalf("Failed during second backup attempt: %v", err)
+		// Check if it's a BackupError with a success message
+		if backupErr, ok := err.(*BackupError); ok {
+			isSuccess := backupErr.Message == "backup created successfully" ||
+				backupErr.Message == "dry run completed" ||
+				backupErr.Message == "file is identical to existing backup"
+			if !isSuccess {
+				t.Fatalf("Failed during second backup attempt: %v", backupErr.Message)
+			}
+		} else {
+			t.Fatalf("Failed during second backup attempt: %v", err)
+		}
 	}
 
 	// Restore stdout and get captured output
@@ -735,7 +796,17 @@ use_current_dir_name: true`
 	// Test backup creation with configuration
 	err = CreateBackupWithTime(cfg, testFile, "config_test", false, mockTime)
 	if err != nil {
-		t.Errorf("CreateBackupWithTime() with config error: %v", err)
+		// Check if it's a BackupError with a success message
+		if backupErr, ok := err.(*BackupError); ok {
+			isSuccess := backupErr.Message == "backup created successfully" ||
+				backupErr.Message == "dry run completed" ||
+				backupErr.Message == "file is identical to existing backup"
+			if !isSuccess {
+				t.Errorf("CreateBackupWithTime() with config error: %v", backupErr.Message)
+			}
+		} else {
+			t.Errorf("CreateBackupWithTime() with config error: %v", err)
+		}
 	}
 
 	// Verify backup was created
@@ -861,13 +932,33 @@ use_current_dir_name: true`
 			// Test dry-run with custom configuration
 			err = CreateBackupWithTime(cfg, testFile, "config_test", true, mockTime)
 			if err != nil {
-				t.Errorf("CreateBackupWithTime() dry-run error: %v", err)
+				// Check if it's a BackupError with a success message
+				if backupErr, ok := err.(*BackupError); ok {
+					isSuccess := backupErr.Message == "backup created successfully" ||
+						backupErr.Message == "dry run completed" ||
+						backupErr.Message == "file is identical to existing backup"
+					if !isSuccess {
+						t.Errorf("CreateBackupWithTime() dry-run error: %v", backupErr.Message)
+					}
+				} else {
+					t.Errorf("CreateBackupWithTime() dry-run error: %v", err)
+				}
 			}
 
 			// Test actual backup creation with custom configuration
 			err = CreateBackupWithTime(cfg, testFile, "config_test", false, mockTime)
 			if err != nil {
-				t.Errorf("CreateBackupWithTime() error: %v", err)
+				// Check if it's a BackupError with a success message
+				if backupErr, ok := err.(*BackupError); ok {
+					isSuccess := backupErr.Message == "backup created successfully" ||
+						backupErr.Message == "dry run completed" ||
+						backupErr.Message == "file is identical to existing backup"
+					if !isSuccess {
+						t.Errorf("CreateBackupWithTime() error: %v", backupErr.Message)
+					}
+				} else {
+					t.Errorf("CreateBackupWithTime() error: %v", err)
+				}
 			}
 
 			// Verify backup was created in the correct location

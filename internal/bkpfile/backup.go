@@ -12,6 +12,24 @@ import (
 // timeNow is a variable that can be replaced for testing
 var timeNow = time.Now
 
+// BackupError represents an error with an associated status code
+type BackupError struct {
+	Message    string
+	StatusCode int
+}
+
+func (e *BackupError) Error() string {
+	return e.Message
+}
+
+// NewBackupError creates a new BackupError with the given message and status code
+func NewBackupError(message string, statusCode int) *BackupError {
+	return &BackupError{
+		Message:    message,
+		StatusCode: statusCode,
+	}
+}
+
 // Backup represents a file backup
 // Architecture: Data Objects - Backup
 type Backup struct {
@@ -96,7 +114,7 @@ func CopyFile(src, dst string) error {
 func ListBackups(backupDir string, sourceFile string) ([]Backup, error) {
 	// Check if backup directory exists
 	if _, err := os.Stat(backupDir); os.IsNotExist(err) {
-		return nil, fmt.Errorf("backup directory does not exist: %s", backupDir)
+		return nil, nil // No backups exist yet, return empty list
 	}
 
 	// Get the source path relative to current directory
@@ -181,10 +199,16 @@ func CreateBackup(cfg *Config, filePath string, note string, dryRun bool) error 
 	// Check if source file exists and is a regular file
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
-		return fmt.Errorf("failed to get file info: %w", err)
+		if os.IsNotExist(err) {
+			return NewBackupError(fmt.Sprintf("file not found: %s", filePath), cfg.StatusFileNotFound)
+		}
+		if os.IsPermission(err) {
+			return NewBackupError(fmt.Sprintf("permission denied: %s", filePath), cfg.StatusPermissionDenied)
+		}
+		return NewBackupError(fmt.Sprintf("failed to get file info: %v", err), cfg.StatusConfigError)
 	}
 	if !fileInfo.Mode().IsRegular() {
-		return fmt.Errorf("not a regular file: %s", filePath)
+		return NewBackupError(fmt.Sprintf("not a regular file: %s", filePath), cfg.StatusInvalidFileType)
 	}
 
 	// Get the source path relative to current directory
@@ -192,15 +216,15 @@ func CreateBackup(cfg *Config, filePath string, note string, dryRun bool) error 
 	if !filepath.IsAbs(filePath) {
 		absPath, err := filepath.Abs(filePath)
 		if err != nil {
-			return fmt.Errorf("failed to get absolute path: %w", err)
+			return NewBackupError(fmt.Sprintf("failed to get absolute path: %v", err), cfg.StatusConfigError)
 		}
 		wd, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("failed to get working directory: %w", err)
+			return NewBackupError(fmt.Sprintf("failed to get working directory: %v", err), cfg.StatusConfigError)
 		}
 		relPath, err := filepath.Rel(wd, absPath)
 		if err != nil {
-			return fmt.Errorf("failed to get relative path: %w", err)
+			return NewBackupError(fmt.Sprintf("failed to get relative path: %v", err), cfg.StatusConfigError)
 		}
 		sourcePath = relPath
 	}
@@ -211,7 +235,7 @@ func CreateBackup(cfg *Config, filePath string, note string, dryRun bool) error 
 	// Check for existing backups
 	backups, err := ListBackups(cfg.BackupDirPath, filePath)
 	if err != nil {
-		return fmt.Errorf("failed to list existing backups: %w", err)
+		return NewBackupError(fmt.Sprintf("failed to list existing backups: %v", err), cfg.StatusConfigError)
 	}
 
 	// If there are existing backups, compare with the most recent one
@@ -219,7 +243,7 @@ func CreateBackup(cfg *Config, filePath string, note string, dryRun bool) error 
 		mostRecent := backups[0] // ListBackups sorts by most recent first
 		identical, err := CompareFiles(filePath, mostRecent.Path)
 		if err != nil {
-			return fmt.Errorf("failed to compare files: %w", err)
+			return NewBackupError(fmt.Sprintf("failed to compare files: %v", err), cfg.StatusConfigError)
 		}
 		// Only check if the content is identical, not the note
 		if identical {
@@ -229,7 +253,7 @@ func CreateBackup(cfg *Config, filePath string, note string, dryRun bool) error 
 				relPath = mostRecent.Path // Fallback to absolute path if relative path fails
 			}
 			fmt.Printf("File is identical to existing backup: %s\n", relPath)
-			return nil
+			return NewBackupError("file is identical to existing backup", cfg.StatusFileIsIdenticalToExistingBackup)
 		}
 	}
 
@@ -251,17 +275,31 @@ func CreateBackup(cfg *Config, filePath string, note string, dryRun bool) error 
 			relPath = backupPath // Fallback to absolute path if relative path fails
 		}
 		fmt.Printf("Would create backup: %s\n", relPath)
-		return nil
+		return NewBackupError("dry run completed", cfg.StatusCreatedBackup)
 	}
 
 	// Create backup directory if it doesn't exist
 	if err := os.MkdirAll(backupSubDir, 0755); err != nil {
-		return fmt.Errorf("failed to create backup directory: %w", err)
+		if os.IsPermission(err) {
+			return NewBackupError(fmt.Sprintf("permission denied creating backup directory: %v", err), cfg.StatusPermissionDenied)
+		}
+		// Check for disk full conditions
+		if strings.Contains(err.Error(), "no space left") || strings.Contains(err.Error(), "disk full") {
+			return NewBackupError(fmt.Sprintf("disk full: %v", err), cfg.StatusDiskFull)
+		}
+		return NewBackupError(fmt.Sprintf("failed to create backup directory: %v", err), cfg.StatusFailedToCreateBackupDirectory)
 	}
 
 	// Copy the file
 	if err := CopyFile(filePath, backupPath); err != nil {
-		return fmt.Errorf("failed to create backup: %w", err)
+		if os.IsPermission(err) {
+			return NewBackupError(fmt.Sprintf("permission denied copying file: %v", err), cfg.StatusPermissionDenied)
+		}
+		// Check for disk full conditions
+		if strings.Contains(err.Error(), "no space left") || strings.Contains(err.Error(), "disk full") {
+			return NewBackupError(fmt.Sprintf("disk full: %v", err), cfg.StatusDiskFull)
+		}
+		return NewBackupError(fmt.Sprintf("failed to create backup: %v", err), cfg.StatusConfigError)
 	}
 
 	// Get relative path for display
@@ -271,7 +309,7 @@ func CreateBackup(cfg *Config, filePath string, note string, dryRun bool) error 
 	}
 	fmt.Printf("Created backup: %s\n", relPath)
 
-	return nil
+	return NewBackupError("backup created successfully", cfg.StatusCreatedBackup)
 }
 
 // CreateBackupWithTime creates a backup of the specified file with a custom time function
@@ -280,10 +318,16 @@ func CreateBackupWithTime(cfg *Config, filePath string, note string, dryRun bool
 	// Check if source file exists and is a regular file
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
-		return fmt.Errorf("failed to get file info: %w", err)
+		if os.IsNotExist(err) {
+			return NewBackupError(fmt.Sprintf("file not found: %s", filePath), cfg.StatusFileNotFound)
+		}
+		if os.IsPermission(err) {
+			return NewBackupError(fmt.Sprintf("permission denied: %s", filePath), cfg.StatusPermissionDenied)
+		}
+		return NewBackupError(fmt.Sprintf("failed to get file info: %v", err), cfg.StatusConfigError)
 	}
 	if !fileInfo.Mode().IsRegular() {
-		return fmt.Errorf("not a regular file: %s", filePath)
+		return NewBackupError(fmt.Sprintf("not a regular file: %s", filePath), cfg.StatusInvalidFileType)
 	}
 
 	// Get the source path relative to current directory
@@ -291,15 +335,15 @@ func CreateBackupWithTime(cfg *Config, filePath string, note string, dryRun bool
 	if !filepath.IsAbs(filePath) {
 		absPath, err := filepath.Abs(filePath)
 		if err != nil {
-			return fmt.Errorf("failed to get absolute path: %w", err)
+			return NewBackupError(fmt.Sprintf("failed to get absolute path: %v", err), cfg.StatusConfigError)
 		}
 		wd, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("failed to get working directory: %w", err)
+			return NewBackupError(fmt.Sprintf("failed to get working directory: %v", err), cfg.StatusConfigError)
 		}
 		relPath, err := filepath.Rel(wd, absPath)
 		if err != nil {
-			return fmt.Errorf("failed to get relative path: %w", err)
+			return NewBackupError(fmt.Sprintf("failed to get relative path: %v", err), cfg.StatusConfigError)
 		}
 		sourcePath = relPath
 	}
@@ -310,7 +354,7 @@ func CreateBackupWithTime(cfg *Config, filePath string, note string, dryRun bool
 	// Check for existing backups
 	backups, err := ListBackups(cfg.BackupDirPath, filePath)
 	if err != nil {
-		return fmt.Errorf("failed to list existing backups: %w", err)
+		return NewBackupError(fmt.Sprintf("failed to list existing backups: %v", err), cfg.StatusConfigError)
 	}
 
 	// If there are existing backups, compare with the most recent one
@@ -318,7 +362,7 @@ func CreateBackupWithTime(cfg *Config, filePath string, note string, dryRun bool
 		mostRecent := backups[0] // ListBackups sorts by most recent first
 		identical, err := CompareFiles(filePath, mostRecent.Path)
 		if err != nil {
-			return fmt.Errorf("failed to compare files: %w", err)
+			return NewBackupError(fmt.Sprintf("failed to compare files: %v", err), cfg.StatusConfigError)
 		}
 		// If the content is identical, skip backup regardless of note
 		if identical {
@@ -328,7 +372,7 @@ func CreateBackupWithTime(cfg *Config, filePath string, note string, dryRun bool
 				relPath = mostRecent.Path // Fallback to absolute path if relative path fails
 			}
 			fmt.Printf("File is identical to existing backup: %s\n", relPath)
-			return nil
+			return NewBackupError("file is identical to existing backup", cfg.StatusFileIsIdenticalToExistingBackup)
 		}
 	}
 
@@ -350,17 +394,31 @@ func CreateBackupWithTime(cfg *Config, filePath string, note string, dryRun bool
 			relPath = backupPath // Fallback to absolute path if relative path fails
 		}
 		fmt.Printf("Would create backup: %s\n", relPath)
-		return nil
+		return NewBackupError("dry run completed", cfg.StatusCreatedBackup)
 	}
 
 	// Create backup directory if it doesn't exist
 	if err := os.MkdirAll(backupSubDir, 0755); err != nil {
-		return fmt.Errorf("failed to create backup directory: %w", err)
+		if os.IsPermission(err) {
+			return NewBackupError(fmt.Sprintf("permission denied creating backup directory: %v", err), cfg.StatusPermissionDenied)
+		}
+		// Check for disk full conditions
+		if strings.Contains(err.Error(), "no space left") || strings.Contains(err.Error(), "disk full") {
+			return NewBackupError(fmt.Sprintf("disk full: %v", err), cfg.StatusDiskFull)
+		}
+		return NewBackupError(fmt.Sprintf("failed to create backup directory: %v", err), cfg.StatusFailedToCreateBackupDirectory)
 	}
 
 	// Copy the file
 	if err := CopyFile(filePath, backupPath); err != nil {
-		return fmt.Errorf("failed to create backup: %w", err)
+		if os.IsPermission(err) {
+			return NewBackupError(fmt.Sprintf("permission denied copying file: %v", err), cfg.StatusPermissionDenied)
+		}
+		// Check for disk full conditions
+		if strings.Contains(err.Error(), "no space left") || strings.Contains(err.Error(), "disk full") {
+			return NewBackupError(fmt.Sprintf("disk full: %v", err), cfg.StatusDiskFull)
+		}
+		return NewBackupError(fmt.Sprintf("failed to create backup: %v", err), cfg.StatusConfigError)
 	}
 
 	// Get relative path for display
@@ -370,7 +428,7 @@ func CreateBackupWithTime(cfg *Config, filePath string, note string, dryRun bool
 	}
 	fmt.Printf("Created backup: %s\n", relPath)
 
-	return nil
+	return NewBackupError("backup created successfully", cfg.StatusCreatedBackup)
 }
 
 // CompareFiles performs a byte-by-byte comparison of two files
