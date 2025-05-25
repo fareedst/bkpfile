@@ -106,6 +106,17 @@ func GetConfigSearchPath() []string {
 	return paths
 }
 
+// findConfigValueIndex returns the index of the config value with the given name
+// Returns -1 if not found
+func findConfigValueIndex(configValues []ConfigValue, name string) int {
+	for i, cv := range configValues {
+		if cv.Name == name {
+			return i
+		}
+	}
+	return -1
+}
+
 // DisplayConfig displays computed configuration values and exits
 // Architecture: Core Functions - Configuration Management - DisplayConfig
 func DisplayConfig() error {
@@ -116,7 +127,6 @@ func DisplayConfig() error {
 	defaultCfg := DefaultConfig()
 	configValues := []ConfigValue{
 		{Name: "backup_dir_path", Value: defaultCfg.BackupDirPath, Source: "default"},
-		{Name: "use_current_dir_name", Value: fmt.Sprintf("%t", defaultCfg.UseCurrentDirName), Source: "default"},
 		{Name: "status_config_error", Value: fmt.Sprintf("%d", defaultCfg.StatusConfigError), Source: "default"},
 		{Name: "status_created_backup", Value: fmt.Sprintf("%d", defaultCfg.StatusCreatedBackup), Source: "default"},
 		{Name: "status_disk_full", Value: fmt.Sprintf("%d", defaultCfg.StatusDiskFull), Source: "default"},
@@ -125,6 +135,7 @@ func DisplayConfig() error {
 		{Name: "status_file_not_found", Value: fmt.Sprintf("%d", defaultCfg.StatusFileNotFound), Source: "default"},
 		{Name: "status_invalid_file_type", Value: fmt.Sprintf("%d", defaultCfg.StatusInvalidFileType), Source: "default"},
 		{Name: "status_permission_denied", Value: fmt.Sprintf("%d", defaultCfg.StatusPermissionDenied), Source: "default"},
+		{Name: "use_current_dir_name", Value: fmt.Sprintf("%t", defaultCfg.UseCurrentDirName), Source: "default"},
 	}
 
 	// Process configuration files in order with precedence rules
@@ -174,42 +185,41 @@ func DisplayConfig() error {
 				}
 			}
 			// Update only if not already set by a previous (higher precedence) file
-			if configValues[0].Source == "default" {
-				configValues[0].Value = backupPath
-				configValues[0].Source = originalPath
+			if idx := findConfigValueIndex(configValues, "backup_dir_path"); idx >= 0 && configValues[idx].Source == "default" {
+				configValues[idx].Value = backupPath
+				configValues[idx].Source = originalPath
 			}
 		}
 
 		if _, exists := yamlData["use_current_dir_name"]; exists {
 			// Update only if not already set by a previous (higher precedence) file
-			if configValues[1].Source == "default" {
-				configValues[1].Value = fmt.Sprintf("%t", tempCfg.UseCurrentDirName)
-				configValues[1].Source = originalPath
+			if idx := findConfigValueIndex(configValues, "use_current_dir_name"); idx >= 0 && configValues[idx].Source == "default" {
+				configValues[idx].Value = fmt.Sprintf("%t", tempCfg.UseCurrentDirName)
+				configValues[idx].Source = originalPath
 			}
 		}
 
 		// Handle status code configuration fields
 		statusFields := []struct {
 			yamlKey string
-			index   int
 			value   int
 		}{
-			{"status_config_error", 2, tempCfg.StatusConfigError},
-			{"status_created_backup", 3, tempCfg.StatusCreatedBackup},
-			{"status_disk_full", 4, tempCfg.StatusDiskFull},
-			{"status_failed_to_create_backup_directory", 5, tempCfg.StatusFailedToCreateBackupDirectory},
-			{"status_file_is_identical_to_existing_backup", 6, tempCfg.StatusFileIsIdenticalToExistingBackup},
-			{"status_file_not_found", 7, tempCfg.StatusFileNotFound},
-			{"status_invalid_file_type", 8, tempCfg.StatusInvalidFileType},
-			{"status_permission_denied", 9, tempCfg.StatusPermissionDenied},
+			{"status_config_error", tempCfg.StatusConfigError},
+			{"status_created_backup", tempCfg.StatusCreatedBackup},
+			{"status_disk_full", tempCfg.StatusDiskFull},
+			{"status_failed_to_create_backup_directory", tempCfg.StatusFailedToCreateBackupDirectory},
+			{"status_file_is_identical_to_existing_backup", tempCfg.StatusFileIsIdenticalToExistingBackup},
+			{"status_file_not_found", tempCfg.StatusFileNotFound},
+			{"status_invalid_file_type", tempCfg.StatusInvalidFileType},
+			{"status_permission_denied", tempCfg.StatusPermissionDenied},
 		}
 
 		for _, field := range statusFields {
 			if _, exists := yamlData[field.yamlKey]; exists {
 				// Update only if not already set by a previous (higher precedence) file
-				if configValues[field.index].Source == "default" {
-					configValues[field.index].Value = fmt.Sprintf("%d", field.value)
-					configValues[field.index].Source = originalPath
+				if idx := findConfigValueIndex(configValues, field.yamlKey); idx >= 0 && configValues[idx].Source == "default" {
+					configValues[idx].Value = fmt.Sprintf("%d", field.value)
+					configValues[idx].Source = originalPath
 				}
 			}
 		}

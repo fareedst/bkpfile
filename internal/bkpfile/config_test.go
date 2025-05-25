@@ -255,7 +255,6 @@ func TestDisplayConfig(t *testing.T) {
 			setupFiles: map[string]string{},
 			envValue:   "",
 			wantOutput: `backup_dir_path: ../.bkpfile (source: default)
-use_current_dir_name: true (source: default)
 status_config_error: 10 (source: default)
 status_created_backup: 0 (source: default)
 status_disk_full: 30 (source: default)
@@ -264,6 +263,7 @@ status_file_is_identical_to_existing_backup: 0 (source: default)
 status_file_not_found: 20 (source: default)
 status_invalid_file_type: 21 (source: default)
 status_permission_denied: 22 (source: default)
+use_current_dir_name: true (source: default)
 `,
 			wantErr: false,
 		},
@@ -275,7 +275,6 @@ use_current_dir_name: false`,
 			},
 			envValue: "",
 			wantOutput: `backup_dir_path: /custom/backup (source: ./.bkpfile.yml)
-use_current_dir_name: false (source: ./.bkpfile.yml)
 status_config_error: 10 (source: default)
 status_created_backup: 0 (source: default)
 status_disk_full: 30 (source: default)
@@ -284,6 +283,7 @@ status_file_is_identical_to_existing_backup: 0 (source: default)
 status_file_not_found: 20 (source: default)
 status_invalid_file_type: 21 (source: default)
 status_permission_denied: 22 (source: default)
+use_current_dir_name: false (source: ./.bkpfile.yml)
 `,
 			wantErr: false,
 		},
@@ -297,7 +297,6 @@ use_current_dir_name: true`,
 			},
 			envValue: "first.yml:second.yml",
 			wantOutput: `backup_dir_path: /first/backup (source: ./first.yml)
-use_current_dir_name: false (source: ./first.yml)
 status_config_error: 10 (source: default)
 status_created_backup: 0 (source: default)
 status_disk_full: 30 (source: default)
@@ -306,6 +305,7 @@ status_file_is_identical_to_existing_backup: 0 (source: default)
 status_file_not_found: 20 (source: default)
 status_invalid_file_type: 21 (source: default)
 status_permission_denied: 22 (source: default)
+use_current_dir_name: false (source: ./first.yml)
 `,
 			wantErr: false,
 		},
