@@ -1,7 +1,7 @@
 # BkpFile: Single File Backup CLI Application
 
 ## Overview
-BkpFile is a command-line application for macOS and Linux that creates backups of individual files. It supports customizable naming patterns and maintains a history of file backups.
+BkpFile is a command-line application for macOS and Linux that creates backups of individual files. It supports customizable naming patterns, maintains a history of file backups, and provides robust error handling with automatic resource cleanup.
 
 > **Important**: This document describes the user-facing features and behaviors. For immutable specifications that cannot be changed without a major version bump, see [Immutable Specifications](immutable.md).
 
@@ -19,12 +19,36 @@ BkpFile is a command-line application for macOS and Linux that creates backups o
 ### For Contributors
 - Review [Immutable Specifications](immutable.md) first to understand constraints
 - Follow [Testing](testing.md) requirements for all changes
+- Ensure all code passes linting requirements before submission
 
 ### Document Maintenance
 - Keep [Specification](specification.md) and [Immutable Specifications](immutable.md) in sync
 - Update [Requirements](requirements.md) with new features
 - Maintain test coverage as per [Testing](testing.md)
 - All changes must preserve existing functionality per [Immutable Specifications](immutable.md)
+
+## Quality Assurance and Code Standards
+
+### Linting Requirements
+- All Go code must pass `revive` linter checks before commit
+- Linting configuration is maintained in `.revive.toml`
+- Run linting with `make lint` command
+- Code must follow Go best practices and naming conventions
+- All errors must be properly handled (no unhandled return values)
+
+### Error Handling Standards
+- All backup operations return structured errors with status codes
+- Enhanced disk space detection for various storage conditions
+- Panic recovery mechanisms prevent application crashes
+- Context support for operation cancellation and timeouts
+- Comprehensive error logging without exposing sensitive information
+
+### Resource Management
+- Automatic cleanup of temporary files and directories
+- Thread-safe resource tracking for concurrent operations
+- Atomic file operations to prevent data corruption
+- No resource leaks in any error scenario
+- Comprehensive cleanup testing and verification
 
 ## Configuration Discovery
 - Configuration files are discovered using a configurable search path
@@ -93,6 +117,7 @@ BkpFile is a command-line application for macOS and Linux that creates backups o
   ```
 - Backups are sorted by creation time (most recent first)
 - Backups are organized by their source file paths
+- Handles errors gracefully with appropriate status codes
 
 ### 2. Display Configuration
 - Displays computed configuration values after processing configuration files
@@ -109,7 +134,7 @@ BkpFile is a command-line application for macOS and Linux that creates backups o
 - If `BKPFILE_CONFIG` is not set, uses the default search path
 
 ### 3. Create Backup
-- Creates a copy of the specified file
+- Creates a copy of the specified file with robust error handling and resource cleanup
 - Usage: `bkpfile [FILE_PATH] [NOTE]`
 - Before creating a backup:
   - Compares the file with its most recent backup using byte comparison
@@ -123,19 +148,115 @@ BkpFile is a command-line application for macOS and Linux that creates backups o
 - The backup maintains the original file's directory structure in the backup path
 - NOTE is an optional positional argument provided by the user
 
+#### Enhanced Backup Features
+- **Atomic Operations**: Uses temporary files to ensure backup integrity
+- **Resource Cleanup**: Automatically cleans up temporary files on success or failure
+- **Context Support**: Supports operation cancellation and timeouts
+- **Enhanced Error Detection**: Detects various disk space and permission conditions
+- **Panic Recovery**: Recovers from unexpected errors without leaving temporary files
+- **Thread Safety**: Safe for concurrent operations
+
 ## Global Options
 - **Dry-Run Mode**: When enabled with `--dry-run` flag:
   - Shows the backup filename that would be created
   - No actual backup is created
+  - Includes resource cleanup verification in dry-run mode
+
+## Error Handling and Recovery
+
+### Structured Error Reporting
+- All operations return structured errors with specific status codes
+- Human-readable error messages for common scenarios
+- Technical details logged to stderr when appropriate
+- No sensitive information exposed in error messages
+
+### Enhanced Error Detection
+- **Disk Space**: Detects various disk full conditions including:
+  - "no space left on device"
+  - "disk full"
+  - "not enough space"
+  - "insufficient disk space"
+  - "device full"
+  - "quota exceeded"
+  - "file too large"
+- **Permission Errors**: Proper handling of file access permissions
+- **File Type Validation**: Ensures only regular files are backed up
+- **Path Resolution**: Handles both absolute and relative paths securely
+
+### Panic Recovery
+- Critical operations include panic recovery mechanisms
+- Panics are logged to stderr without exposing internal details
+- Resource cleanup still occurs even when panics happen
+- Application doesn't crash on unexpected errors
+
+### Context and Cancellation Support
+- Long-running operations support cancellation via context
+- Timeout handling for operations that might hang
+- Graceful shutdown with proper resource cleanup
+- Context cancellation checked at multiple operation points
+
+## Resource Management
+
+### Automatic Cleanup
+- All temporary files and directories are automatically cleaned up
+- Cleanup occurs on success, failure, and cancellation
+- Thread-safe resource tracking for concurrent operations
+- Error-resilient cleanup continues even if individual operations fail
+
+### Atomic Operations
+- File operations use temporary files to ensure atomicity
+- Atomic rename operations prevent data corruption
+- Temporary files are registered for automatic cleanup
+- Successful operations remove files from cleanup lists
+
+### Leak Prevention
+- Comprehensive testing verifies no resource leaks
+- All temporary resources are tracked and cleaned
+- No orphaned files remain in any error scenario
+- Memory usage is properly managed
+
+## Build and Development Requirements
+
+### Code Quality Standards
+- All code must pass `revive` linter before commit
+- Comprehensive test coverage required for all features
+- All errors must be properly handled
+- Documentation required for all public functions
+- Backward compatibility must be maintained
+
+### Build System
+- `make lint`: Run code linting
+- `make test`: Run all tests with verbose output
+- `make build`: Build application (depends on lint and test passing)
+- `make clean`: Remove build artifacts
+
+### Testing Requirements
+- Unit tests for all core functions
+- Integration tests for complete workflows
+- Resource cleanup verification in all test scenarios
+- Context cancellation and timeout testing
+- Performance benchmarks for critical operations
+- Stress testing for concurrent operations
 
 ## Implementation Details
 For detailed implementation requirements and constraints, see:
 - [Immutable Specifications](immutable.md) for core behaviors that cannot be changed
 - [Architecture](architecture.md) for system design and implementation details
 - [Requirements](requirements.md) for technical requirements and test coverage
+- [Resource Cleanup Documentation](../RESOURCE_CLEANUP.md) for detailed cleanup functionality
 
 ## Platform Compatibility
 - Works on macOS and Linux systems
 - Uses platform-independent path handling
 - Preserves file permissions and ownership where applicable
 - Handles file system differences between platforms
+- Thread-safe operations for concurrent access
+- Efficient resource management across platforms
+
+## Performance Characteristics
+- Minimal overhead for resource tracking
+- Efficient file comparison with length checks first
+- Optimized cleanup operations
+- Low memory footprint
+- Fast atomic file operations
+- Scalable for large files and many backups

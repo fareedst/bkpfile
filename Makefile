@@ -1,8 +1,26 @@
-.PHONY: test build build-all build-ubuntu20 build-ubuntu22 build-ubuntu24 build-macos build-macos-arm64 build-macos-amd64 build-local clean
+.PHONY: test build build-all build-ubuntu20 build-ubuntu22 build-ubuntu24 build-macos build-macos-arm64 build-macos-amd64 build-local clean lint lint-fix verify-lint
 
 # Test the application
 test:
 	go test ./internal/bkpfile -v
+
+# Lint the code using revive
+lint:
+	@echo "Running revive linter..."
+	@revive -config revive.toml ./...
+
+# Lint and attempt to fix issues automatically
+lint-fix:
+	@echo "Running go fmt..."
+	@go fmt ./...
+	@echo "Running go vet..."
+	@go vet ./...
+	@echo "Running revive linter..."
+	@revive -config revive.toml ./...
+
+# Verify revive deployment and configuration
+verify-lint:
+	@./scripts/verify-lint.sh
 
 # Build for local development (current platform)
 build-local:

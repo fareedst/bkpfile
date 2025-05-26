@@ -1,0 +1,54 @@
+ignoreGeneratedHeader = false
+severity = "warning"
+confidence = 0.8
+errorCode = 0
+warningCode = 0
+
+[rule.exported]
+  arguments = ["disableStutteringCheck"]
+
+[rule.package-comments]
+
+[rule.var-naming]
+
+[rule.var-declaration]
+
+[rule.struct-tag]
+
+[rule.receiver-naming]
+
+[rule.error-strings]
+
+[rule.error-naming]
+
+[rule.dot-imports]
+
+[rule.blank-imports]
+
+[rule.context-as-argument]
+
+[rule.context-keys-type]
+
+[rule.range]
+
+[rule.range-val-in-closure]
+
+[rule.range-val-address]
+
+[rule.unexported-return]
+
+[rule.time-naming]
+
+[rule.string-of-int]
+
+[rule.string-format]
+
+[rule.early-return]
+
+[rule.unhandled-error]
+
+[rule.defer]
+
+[rule.unexported-naming]
+
+[rule.errorf] 

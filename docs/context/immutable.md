@@ -15,7 +15,25 @@ This document contains specifications that MUST NOT be changed without a major v
 - Source files must be regular files (not directories or special files)
 - Create backup directories automatically if they don't exist
 - Display all paths relative to current directory
+- **Atomic Operations**: All backup operations must be atomic to prevent corruption
+- **Resource Cleanup**: All temporary files must be cleaned up automatically
 - These file operation rules are fundamental and must not be altered
+
+## Error Handling Requirements
+- **Structured Errors**: All backup operations must return structured errors with status codes
+- **No Resource Leaks**: No temporary files or directories may remain after any operation
+- **Panic Recovery**: Application must recover from panics without leaving temporary resources
+- **Context Support**: Long-running operations must support cancellation via context
+- **Enhanced Detection**: Must detect various disk space and permission error conditions
+- These error handling requirements are mandatory and must be preserved
+
+## Code Quality Standards
+- **Linting**: All Go code must pass `revive` linter checks
+- **Error Handling**: All errors must be properly handled (no unhandled return values)
+- **Testing**: All code must have comprehensive test coverage
+- **Documentation**: All public functions must be documented
+- **Backward Compatibility**: New features must not break existing functionality
+- These quality standards are immutable and must be maintained
 
 ## Commands
 1. List Backups:
@@ -35,6 +53,8 @@ This document contains specifications that MUST NOT be changed without a major v
    - Command: `bkpfile [FILE_PATH] [NOTE]`
    - Compare with most recent backup before creating
    - Skip if identical to most recent backup
+   - **Must use atomic operations with automatic cleanup**
+   - **Must support context cancellation**
    - This backup creation logic must remain unchanged
 
 ## Configuration Defaults
@@ -58,25 +78,68 @@ This document contains specifications that MUST NOT be changed without a major v
 - Support macOS and Linux systems
 - Handle platform-specific file system differences
 - Preserve file permissions and ownership where applicable
+- **Thread-safe operations for concurrent access**
+- **Efficient resource management across platforms**
 - Platform support must never be reduced or modified
 
 ## Global Options
 - Support `--dry-run` flag for previewing backup operations
+- **Dry-run must include resource cleanup verification**
 - Existing flag behavior must be maintained
+
+## Build System Requirements
+- **Linting**: `make lint` must pass before any code commit
+- **Testing**: `make test` must pass with comprehensive coverage
+- **Building**: `make build` must depend on successful linting and testing
+- **Cleaning**: `make clean` must remove all build artifacts
+- These build requirements are immutable and must be enforced
+
+## Resource Management Requirements
+- **Automatic Cleanup**: All temporary resources must be cleaned up automatically
+- **Thread Safety**: Resource management must be thread-safe
+- **Atomic Operations**: File operations must use temporary files for atomicity
+- **Leak Prevention**: No resource leaks allowed in any scenario
+- **Error Resilience**: Cleanup must continue even if individual operations fail
+- These resource management requirements are mandatory and cannot be relaxed
+
+## Performance Requirements
+- **Minimal Overhead**: Resource tracking must have minimal performance impact
+- **Efficient Operations**: File comparison must check length before byte comparison
+- **Scalability**: Must handle large files and many backups efficiently
+- **Memory Management**: Must maintain low memory footprint
+- These performance characteristics must be preserved
 
 ## Feature Preservation Rules
 1. New Features:
    - Must not interfere with existing functionality
    - Must maintain all current behaviors
    - Must be optional and not affect existing workflows
+   - **Must include automatic resource cleanup**
+   - **Must support context cancellation where appropriate**
+   - **Must pass all linting and testing requirements**
 
 2. Modifications:
    - Must preserve all existing command-line interfaces
    - Must maintain current file handling behaviors
    - Must keep existing configuration options
    - Must not change established backup naming patterns
+   - **Must not introduce resource leaks**
+   - **Must maintain error handling standards**
+   - **Must preserve atomic operation guarantees**
 
 3. Testing Requirements:
    - All new code must include tests for existing functionality
    - Regression tests must verify no existing features are broken
-   - Platform compatibility tests must be maintained 
+   - Platform compatibility tests must be maintained
+   - **Resource cleanup must be verified in all test scenarios**
+   - **Context cancellation and timeout handling must be tested**
+   - **Performance benchmarks must not regress**
+   - **All code must pass linting before commit**
+
+4. Quality Assurance:
+   - **Code must pass revive linter with zero warnings**
+   - **All errors must be properly handled**
+   - **All public functions must be documented**
+   - **Test coverage must meet minimum thresholds**
+   - **No temporary files may remain after any operation**
+   - **Memory leaks are strictly prohibited** 
