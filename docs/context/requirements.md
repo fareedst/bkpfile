@@ -57,8 +57,8 @@ rm := NewResourceManager()
 defer rm.Cleanup()
 
 // Register temporary resources
-rm.AddTempFile("/path/to/temp.tmp")
-rm.AddTempDir("/path/to/tempdir")
+rm.AddTempFile("/tmp/backup.tmp")
+rm.AddTempDir("/tmp/backup_work")
 ```
 
 ### Enhanced Error Handling Requirements
@@ -81,6 +81,131 @@ err := NewBackupError("file not found", cfg.StatusFileNotFound)
 if backupErr, ok := err.(*BackupError); ok {
     fmt.Fprintf(os.Stderr, "Error: %s\n", backupErr.Message)
     os.Exit(backupErr.StatusCode)
+}
+```
+
+### Output Formatting
+**Implementation**: `formatter.go`
+**Specification Requirements**:
+- `NewOutputFormatter(cfg *Config) *OutputFormatter`
+  - Spec: "Creates new output formatter with configuration"
+  - Input: `cfg *Config` - Configuration containing format strings
+  - Output: `*OutputFormatter` - New formatter instance
+  - Behavior: Creates formatter with reference to configuration for format strings
+  - Error Cases: None
+
+- `FormatCreatedBackup(path string) string`
+  - Spec: "Formats successful backup creation message using printf-style format"
+  - Input: `path string` - Path to created backup
+  - Output: `string` - Formatted message
+  - Behavior: Uses `cfg.FormatCreatedBackup` format string with path parameter
+  - Error Cases: None (falls back to safe default on invalid format)
+
+- `FormatIdenticalBackup(path string) string`
+  - Spec: "Formats identical file message using printf-style format"
+  - Input: `path string` - Path to existing backup
+  - Output: `string` - Formatted message
+  - Behavior: Uses `cfg.FormatIdenticalBackup` format string with path parameter
+  - Error Cases: None (falls back to safe default on invalid format)
+
+- `FormatListBackup(path, creationTime string) string`
+  - Spec: "Formats backup listing entry using printf-style format"
+  - Input:
+    - `path string` - Path to backup file
+    - `creationTime string` - Creation timestamp
+  - Output: `string` - Formatted message
+  - Behavior: Uses `cfg.FormatListBackup` format string with path and time parameters
+  - Error Cases: None (falls back to safe default on invalid format)
+
+- `FormatConfigValue(name, value, source string) string`
+  - Spec: "Formats configuration value display using printf-style format"
+  - Input:
+    - `name string` - Configuration parameter name
+    - `value string` - Configuration value
+    - `source string` - Source file or "default"
+  - Output: `string` - Formatted message
+  - Behavior: Uses `cfg.FormatConfigValue` format string with name, value, and source parameters
+  - Error Cases: None (falls back to safe default on invalid format)
+
+- `FormatDryRunBackup(path string) string`
+  - Spec: "Formats dry-run backup message using printf-style format"
+  - Input: `path string` - Path that would be created
+  - Output: `string` - Formatted message
+  - Behavior: Uses `cfg.FormatDryRunBackup` format string with path parameter
+  - Error Cases: None (falls back to safe default on invalid format)
+
+- `FormatError(message string) string`
+  - Spec: "Formats error message using printf-style format"
+  - Input: `message string` - Error message
+  - Output: `string` - Formatted message
+  - Behavior: Uses `cfg.FormatError` format string with message parameter
+  - Error Cases: None (falls back to safe default on invalid format)
+
+- `PrintCreatedBackup(path string)`
+  - Spec: "Prints formatted backup creation message to stdout"
+  - Input: `path string` - Path to created backup
+  - Output: None (prints to stdout)
+  - Behavior: Formats message using FormatCreatedBackup and prints to stdout
+  - Error Cases: None
+
+- `PrintIdenticalBackup(path string)`
+  - Spec: "Prints formatted identical file message to stdout"
+  - Input: `path string` - Path to existing backup
+  - Output: None (prints to stdout)
+  - Behavior: Formats message using FormatIdenticalBackup and prints to stdout
+  - Error Cases: None
+
+- `PrintListBackup(path, creationTime string)`
+  - Spec: "Prints formatted backup listing entry to stdout"
+  - Input:
+    - `path string` - Path to backup file
+    - `creationTime string` - Creation timestamp
+  - Output: None (prints to stdout)
+  - Behavior: Formats message using FormatListBackup and prints to stdout
+  - Error Cases: None
+
+- `PrintConfigValue(name, value, source string)`
+  - Spec: "Prints formatted configuration value to stdout"
+  - Input:
+    - `name string` - Configuration parameter name
+    - `value string` - Configuration value
+    - `source string` - Source file or "default"
+  - Output: None (prints to stdout)
+  - Behavior: Formats message using FormatConfigValue and prints to stdout
+  - Error Cases: None
+
+- `PrintDryRunBackup(path string)`
+  - Spec: "Prints formatted dry-run message to stdout"
+  - Input: `path string` - Path that would be created
+  - Output: None (prints to stdout)
+  - Behavior: Formats message using FormatDryRunBackup and prints to stdout
+  - Error Cases: None
+
+- `PrintError(message string)`
+  - Spec: "Prints formatted error message to stderr"
+  - Input: `message string` - Error message
+  - Output: None (prints to stderr)
+  - Behavior: Formats message using FormatError and prints to stderr
+  - Error Cases: None
+
+**Example Usage**:
+```go
+// Create output formatter
+formatter := NewOutputFormatter(cfg)
+
+// Format messages
+createdMsg := formatter.FormatCreatedBackup("/path/to/backup")
+errorMsg := formatter.FormatError("File not found")
+
+// Print messages directly
+formatter.PrintCreatedBackup("/path/to/backup")
+formatter.PrintError("File not found")
+
+// Use in backup operations
+if backupCreated {
+    formatter.PrintCreatedBackup(backupPath)
+} else {
+    formatter.PrintIdenticalBackup(existingBackupPath)
 }
 ```
 
@@ -132,6 +257,81 @@ if backupErr, ok := err.(*BackupError); ok {
     - Spec: "Exit code when configuration is invalid"
     - Default: 10
     - YAML key: "status_config_error"
+  - `FormatCreatedBackup`: `Config.FormatCreatedBackup`
+    - Spec: "Printf-style format string for successful backup creation messages"
+    - Default: "Created backup: %s\n"
+    - YAML key: "format_created_backup"
+    - Supports: ANSI color codes and text formatting
+  - `FormatIdenticalBackup`: `Config.FormatIdenticalBackup`
+    - Spec: "Printf-style format string for identical file messages"
+    - Default: "File is identical to existing backup: %s\n"
+    - YAML key: "format_identical_backup"
+    - Supports: ANSI color codes and text formatting
+  - `FormatListBackup`: `Config.FormatListBackup`
+    - Spec: "Printf-style format string for backup listing entries"
+    - Default: "%s (created: %s)\n"
+    - YAML key: "format_list_backup"
+    - Supports: ANSI color codes and text formatting
+  - `FormatConfigValue`: `Config.FormatConfigValue`
+    - Spec: "Printf-style format string for configuration value display"
+    - Default: "%s: %s (source: %s)\n"
+    - YAML key: "format_config_value"
+    - Supports: ANSI color codes and text formatting
+  - `FormatDryRunBackup`: `Config.FormatDryRunBackup`
+    - Spec: "Printf-style format string for dry-run backup messages"
+    - Default: "Would create backup: %s\n"
+    - YAML key: "format_dry_run_backup"
+    - Supports: ANSI color codes and text formatting
+  - `FormatError`: `Config.FormatError`
+    - Spec: "Printf-style format string for error messages"
+    - Default: "Error: %s\n"
+    - YAML key: "format_error"
+    - Supports: ANSI color codes and text formatting
+  - `TemplateCreatedBackup`: `Config.TemplateCreatedBackup`
+    - Spec: "Template string for successful backup creation messages with named placeholders"
+    - Default: "Created backup: %{path}\n"
+    - YAML key: "template_created_backup"
+    - Supports: Go text/template syntax and %{name} placeholders
+  - `TemplateIdenticalBackup`: `Config.TemplateIdenticalBackup`
+    - Spec: "Template string for identical file messages with named placeholders"
+    - Default: "File is identical to existing backup: %{path}\n"
+    - YAML key: "template_identical_backup"
+    - Supports: Go text/template syntax and %{name} placeholders
+  - `TemplateListBackup`: `Config.TemplateListBackup`
+    - Spec: "Template string for backup listing entries with named placeholders"
+    - Default: "%{path} (created: %{creation_time})\n"
+    - YAML key: "template_list_backup"
+    - Supports: Go text/template syntax and %{name} placeholders
+  - `TemplateConfigValue`: `Config.TemplateConfigValue`
+    - Spec: "Template string for configuration value display with named placeholders"
+    - Default: "%{name}: %{value} (source: %{source})\n"
+    - YAML key: "template_config_value"
+    - Supports: Go text/template syntax and %{name} placeholders
+  - `TemplateDryRunBackup`: `Config.TemplateDryRunBackup`
+    - Spec: "Template string for dry-run backup messages with named placeholders"
+    - Default: "Would create backup: %{path}\n"
+    - YAML key: "template_dry_run_backup"
+    - Supports: Go text/template syntax and %{name} placeholders
+  - `TemplateError`: `Config.TemplateError`
+    - Spec: "Template string for error messages with named placeholders"
+    - Default: "Error: %{message}\n"
+    - YAML key: "template_error"
+    - Supports: Go text/template syntax and %{name} placeholders
+  - `PatternBackupFilename`: `Config.PatternBackupFilename`
+    - Spec: "Named regex pattern for parsing backup filenames"
+    - Default: "(?P<filename>[^/]+)-(?P<year>\\d{4})-(?P<month>\\d{2})-(?P<day>\\d{2})-(?P<hour>\\d{2})-(?P<minute>\\d{2})(?:=(?P<note>.+))?"
+    - YAML key: "pattern_backup_filename"
+    - Supports: Named capture groups for data extraction
+  - `PatternConfigLine`: `Config.PatternConfigLine`
+    - Spec: "Named regex pattern for parsing configuration display lines"
+    - Default: "(?P<name>[^:]+):\\s*(?P<value>[^(]+)\\s*\\(source:\\s*(?P<source>[^)]+)\\)"
+    - YAML key: "pattern_config_line"
+    - Supports: Named capture groups for data extraction
+  - `PatternTimestamp`: `Config.PatternTimestamp`
+    - Spec: "Named regex pattern for parsing timestamps"
+    - Default: "(?P<year>\\d{4})-(?P<month>\\d{2})-(?P<day>\\d{2})\\s+(?P<hour>\\d{2}):(?P<minute>\\d{2}):(?P<second>\\d{2})"
+    - YAML key: "pattern_timestamp"
+    - Supports: Named capture groups for data extraction
 
 **Example Usage**:
 ```go
@@ -149,6 +349,10 @@ useCurrentDir := cfg.UseCurrentDirName
 createdBackupStatus := cfg.StatusCreatedBackup
 identicalFileStatus := cfg.StatusFileIsIdenticalToExistingBackup
 fileNotFoundStatus := cfg.StatusFileNotFound
+
+// Access format string configuration
+createdFormat := cfg.FormatCreatedBackup
+errorFormat := cfg.FormatError
 ```
 
 ### ConfigValue
@@ -244,6 +448,54 @@ defer rm.Cleanup()
 
 rm.AddTempFile("/tmp/backup.tmp")
 rm.AddTempDir("/tmp/backup_work")
+```
+
+### TemplateFormatter
+**Implementation**: `formatter.go`
+**Specification Requirements**:
+- **Template-Based Formatting**: Provides centralized template-based formatting using named placeholders
+  - Spec: "All standard output must support template-based formatting with named data extraction"
+  - Fields:
+    - `config`: *Config - Reference to configuration for template strings and regex patterns
+  - Methods:
+    - `NewTemplateFormatter(cfg *Config) *TemplateFormatter`: Creates new template formatter
+    - `FormatWithTemplate(input, pattern, tmplStr string) (string, error)`: Applies text/template to named regex groups
+    - `FormatWithPlaceholders(format string, data map[string]string) string`: Replaces %{name} placeholders
+    - `TemplateCreatedBackup(path string) string`: Formats backup creation using template
+    - `TemplateIdenticalBackup(path string) string`: Formats identical file message using template
+    - `TemplateListBackup(path, creationTime string) string`: Formats backup listing using template
+    - `TemplateConfigValue(name, value, source string) string`: Formats configuration display using template
+    - `TemplateDryRunBackup(path string) string`: Formats dry-run message using template
+    - `TemplateError(message, operation string) string`: Formats error message using template
+
+**Example Usage**:
+```go
+// Create template formatter with configuration
+templateFormatter := NewTemplateFormatter(cfg)
+
+// Format messages using templates
+createdMsg := templateFormatter.TemplateCreatedBackup("/path/to/backup")
+errorMsg := templateFormatter.TemplateError("File not found", "backup_creation")
+
+// Use template formatting with regex extraction
+backupPath := "file.txt-2024-03-21-15-30=important"
+formatted, err := templateFormatter.FormatWithTemplate(
+    backupPath,
+    cfg.PatternBackupFilename,
+    "Backup of {{.filename}} from {{.year}}-{{.month}}-{{.day}} with note: {{.note}}",
+)
+
+// Use placeholder formatting
+data := map[string]string{
+    "filename": "document.txt",
+    "year": "2024",
+    "month": "03",
+    "day": "21",
+}
+result := templateFormatter.FormatWithPlaceholders(
+    "File %{filename} backed up on %{year}-%{month}-%{day}",
+    data,
+)
 ```
 
 ## Core Functions
@@ -666,3 +918,146 @@ if identical {
 - **Resource Management**: All temporary resources must be cleaned up
 - **Documentation**: All public functions must be documented
 - **Backward Compatibility**: New features must not break existing functionality
+
+### OutputFormatter
+**Implementation**: `formatter.go`
+**Specification Requirements**:
+- **Centralized Output Formatting**: Provides consistent printf-style formatting for all application output
+  - Spec: "All standard output must use printf-style format specifications"
+  - Fields:
+    - `config`: *Config - Reference to configuration for format strings
+  - Methods:
+    - `FormatCreatedBackup(path string) string`: Format successful backup creation message
+    - `FormatIdenticalBackup(path string) string`: Format identical file message
+    - `FormatListBackup(path, creationTime string) string`: Format backup listing entry
+    - `FormatConfigValue(name, value, source string) string`: Format configuration value display
+    - `FormatDryRunBackup(path string) string`: Format dry-run backup message
+    - `FormatError(message string) string`: Format error message
+    - `PrintCreatedBackup(path string)`: Print formatted backup creation message to stdout
+    - `PrintIdenticalBackup(path string)`: Print formatted identical file message to stdout
+    - `PrintListBackup(path, creationTime string)`: Print formatted backup listing entry to stdout
+    - `PrintConfigValue(name, value, source string)`: Print formatted configuration value to stdout
+    - `PrintDryRunBackup(path string)`: Print formatted dry-run message to stdout
+    - `PrintError(message string)`: Print formatted error message to stderr
+
+**Example Usage**:
+```go
+// Create output formatter with configuration
+formatter := NewOutputFormatter(cfg)
+
+// Format messages
+createdMsg := formatter.FormatCreatedBackup("/path/to/backup")
+errorMsg := formatter.FormatError("File not found")
+
+// Print messages directly
+formatter.PrintCreatedBackup("/path/to/backup")
+formatter.PrintError("File not found")
+```
+
+### Template Formatting
+**Implementation**: `formatter.go`
+**Specification Requirements**:
+- `NewTemplateFormatter(cfg *Config) *TemplateFormatter`
+  - Spec: "Creates new template formatter with configuration"
+  - Input: `cfg *Config` - Configuration containing template strings and regex patterns
+  - Output: `*TemplateFormatter` - New template formatter instance
+  - Behavior: Creates formatter with reference to configuration for template strings and patterns
+  - Error Cases: None
+
+- `FormatWithTemplate(input, pattern, tmplStr string) (string, error)`
+  - Spec: "Applies text/template to named regex groups extracted from input"
+  - Input:
+    - `input string` - Input text to extract data from
+    - `pattern string` - Named regex pattern for data extraction
+    - `tmplStr string` - Go text/template string with {{.name}} syntax
+  - Output: `(string, error)` - Formatted result or error
+  - Behavior: Extracts named groups from input using pattern, applies template to extracted data
+  - Error Cases: No regex match, invalid template syntax, template execution error
+
+- `FormatWithPlaceholders(format string, data map[string]string) string`
+  - Spec: "Replaces placeholders of the form %{name} with corresponding values"
+  - Input:
+    - `format string` - Format string with %{name} placeholders
+    - `data map[string]string` - Map of placeholder names to values
+  - Output: `string` - Formatted result
+  - Behavior: Replaces all %{name} placeholders with corresponding values, leaves unmatched placeholders intact
+  - Error Cases: None (unmatched placeholders left intact)
+
+- `TemplateCreatedBackup(path string) string`
+  - Spec: "Formats successful backup creation message using template with named placeholders"
+  - Input: `path string` - Path to created backup
+  - Output: `string` - Formatted message
+  - Behavior: Uses `cfg.TemplateCreatedBackup` template string, extracts data from path using `cfg.PatternBackupFilename` if applicable
+  - Error Cases: None (falls back to simple placeholder replacement on regex failure)
+
+- `TemplateIdenticalBackup(path string) string`
+  - Spec: "Formats identical file message using template with named placeholders"
+  - Input: `path string` - Path to existing backup
+  - Output: `string` - Formatted message
+  - Behavior: Uses `cfg.TemplateIdenticalBackup` template string, extracts backup information using named regex patterns
+  - Error Cases: None (falls back to simple placeholder replacement on regex failure)
+
+- `TemplateListBackup(path, creationTime string) string`
+  - Spec: "Formats backup listing entry using template with named placeholders"
+  - Input:
+    - `path string` - Path to backup file
+    - `creationTime string` - Creation timestamp
+  - Output: `string` - Formatted message
+  - Behavior: Uses `cfg.TemplateListBackup` template string, extracts data from path and timestamp using regex patterns
+  - Error Cases: None (falls back to simple placeholder replacement on regex failure)
+
+- `TemplateConfigValue(name, value, source string) string`
+  - Spec: "Formats configuration value display using template with named placeholders"
+  - Input:
+    - `name string` - Configuration parameter name
+    - `value string` - Configuration value
+    - `source string` - Source file or "default"
+  - Output: `string` - Formatted message
+  - Behavior: Uses `cfg.TemplateConfigValue` template string with provided parameters
+  - Error Cases: None (falls back to simple placeholder replacement)
+
+- `TemplateDryRunBackup(path string) string`
+  - Spec: "Formats dry-run backup message using template with named placeholders"
+  - Input: `path string` - Path that would be created
+  - Output: `string` - Formatted message
+  - Behavior: Uses `cfg.TemplateDryRunBackup` template string, extracts planned backup information
+  - Error Cases: None (falls back to simple placeholder replacement on regex failure)
+
+- `TemplateError(message, operation string) string`
+  - Spec: "Formats error message using template with named placeholders"
+  - Input:
+    - `message string` - Error message
+    - `operation string` - Operation context (optional)
+  - Output: `string` - Formatted message
+  - Behavior: Uses `cfg.TemplateError` template string with message and operation context
+  - Error Cases: None (falls back to simple placeholder replacement)
+
+**Example Usage**:
+```go
+// Create template formatter
+templateFormatter := NewTemplateFormatter(cfg)
+
+// Format messages using templates
+createdMsg := templateFormatter.TemplateCreatedBackup("/path/to/backup")
+errorMsg := templateFormatter.TemplateError("File not found", "backup_creation")
+
+// Use template formatting with regex extraction
+backupPath := "file.txt-2024-03-21-15-30=important"
+formatted, err := templateFormatter.FormatWithTemplate(
+    backupPath,
+    cfg.PatternBackupFilename,
+    "Backup of {{.filename}} from {{.year}}-{{.month}}-{{.day}} with note: {{.note}}",
+)
+
+// Use placeholder formatting
+data := map[string]string{
+    "filename": "document.txt",
+    "year": "2024",
+    "month": "03",
+    "day": "21",
+}
+result := templateFormatter.FormatWithPlaceholders(
+    "File %{filename} backed up on %{year}-%{month}-%{day}",
+    data,
+)
+```

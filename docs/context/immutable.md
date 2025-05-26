@@ -35,11 +35,24 @@ This document contains specifications that MUST NOT be changed without a major v
 - **Backward Compatibility**: New features must not break existing functionality
 - These quality standards are immutable and must be maintained
 
+## Output Formatting Requirements
+- **Printf-Style Formatting**: All standard output must use printf-style format specifications
+- **Template-Based Formatting**: Must support text/template and placeholder-based formatting for named data extraction
+- **Configuration-Driven**: Format strings and templates must be retrieved from application configuration
+- **Text Highlighting**: Must provide means to highlight/format text for structure and meaning
+- **Data Separation**: All user-facing text must be extracted from code into data files
+- **Named Placeholders**: Must support both Go text/template syntax ({{.name}}) and placeholder syntax (%{name})
+- **Regex Integration**: Must support named regex groups for data extraction and template formatting
+- **Backward Compatibility**: Default format strings must preserve existing output appearance
+- **Immutable Defaults**: Default format specifications cannot be changed without major version bump
+- These output formatting requirements are mandatory and must be preserved
+
 ## Commands
 1. List Backups:
    - Command: `bkpfile --list [FILE_PATH]`
    - Sort by creation time (most recent first)
    - Display format: `.bkpfile/path/to/file.txt-2024-03-21-15-30=note (created: 2024-03-21 15:30:00)`
+   - **Output formatting must use configurable printf-style format strings**
    - This command structure and output format must be preserved
 
 2. Display Configuration:
@@ -47,6 +60,7 @@ This document contains specifications that MUST NOT be changed without a major v
    - Display computed configuration values with name, value, and source
    - Process configuration files from `BKPFILE_CONFIG` environment variable
    - Exit after displaying values
+   - **Output formatting must use configurable printf-style format strings**
    - This command behavior must remain unchanged once implemented
 
 3. Create Backup:
@@ -55,6 +69,7 @@ This document contains specifications that MUST NOT be changed without a major v
    - Skip if identical to most recent backup
    - **Must use atomic operations with automatic cleanup**
    - **Must support context cancellation**
+   - **Output formatting must use configurable printf-style format strings**
    - This backup creation logic must remain unchanged
 
 ## Configuration Defaults
@@ -72,6 +87,24 @@ This document contains specifications that MUST NOT be changed without a major v
   - `status_file_not_found`: 20
   - `status_invalid_file_type`: 21
   - `status_permission_denied`: 22
+- **Default output format strings**: All format strings default to preserve existing output appearance
+  - `format_created_backup`: "Created backup: %s\n"
+  - `format_identical_backup`: "File is identical to existing backup: %s\n"
+  - `format_list_backup`: "%s (created: %s)\n"
+  - `format_config_value`: "%s: %s (source: %s)\n"
+  - `format_dry_run_backup`: "Would create backup: %s\n"
+  - `format_error`: "Error: %s\n"
+- **Default template format strings**: Template-based formatting with named placeholders
+  - `template_created_backup`: "Created backup: %{path}\n"
+  - `template_identical_backup`: "File is identical to existing backup: %{path}\n"
+  - `template_list_backup`: "%{path} (created: %{creation_time})\n"
+  - `template_config_value`: "%{name}: %{value} (source: %{source})\n"
+  - `template_dry_run_backup`: "Would create backup: %{path}\n"
+  - `template_error`: "Error: %{message}\n"
+- **Default regex patterns**: Named regex patterns for data extraction
+  - `pattern_backup_filename`: `(?P<filename>[^/]+)-(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})-(?P<hour>\d{2})-(?P<minute>\d{2})(?:=(?P<note>.+))?`
+  - `pattern_config_line`: `(?P<name>[^:]+):\s*(?P<value>[^(]+)\s*\(source:\s*(?P<source>[^)]+)\)`
+  - `pattern_timestamp`: `(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})\s+(?P<hour>\d{2}):(?P<minute>\d{2}):(?P<second>\d{2})`
 - These configuration defaults must never be changed without explicit user override
 
 ## Platform Compatibility
@@ -85,6 +118,7 @@ This document contains specifications that MUST NOT be changed without a major v
 ## Global Options
 - Support `--dry-run` flag for previewing backup operations
 - **Dry-run must include resource cleanup verification**
+- **Output formatting must use configurable printf-style format strings**
 - Existing flag behavior must be maintained
 
 ## Build System Requirements

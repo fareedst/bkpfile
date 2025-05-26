@@ -11,7 +11,8 @@ The BkpFile application follows a layered architecture with clear separation of 
 1. **CLI Layer**: Command-line interface and user interaction
 2. **Business Logic Layer**: Core backup functionality and workflows
 3. **Infrastructure Layer**: File system operations, configuration, and resource management
-4. **Quality Assurance Layer**: Linting, testing, and code quality enforcement
+4. **Output Formatting Layer**: Printf-style formatting and text highlighting
+5. **Quality Assurance Layer**: Linting, testing, and code quality enforcement
 
 ## Data Objects
 
@@ -27,6 +28,21 @@ The BkpFile application follows a layered architecture with clear separation of 
    - `StatusPermissionDenied`: int - Exit code when file access is denied
    - `StatusDiskFull`: int - Exit code when disk space is insufficient
    - `StatusConfigError`: int - Exit code when configuration is invalid
+   - `FormatCreatedBackup`: string - Printf-style format string for successful backup creation
+   - `FormatIdenticalBackup`: string - Printf-style format string for identical file messages
+   - `FormatListBackup`: string - Printf-style format string for backup listing entries
+   - `FormatConfigValue`: string - Printf-style format string for configuration value display
+   - `FormatDryRunBackup`: string - Printf-style format string for dry-run backup messages
+   - `FormatError`: string - Printf-style format string for error messages
+   - `TemplateCreatedBackup`: string - Template string for successful backup creation with named placeholders
+   - `TemplateIdenticalBackup`: string - Template string for identical file messages with named placeholders
+   - `TemplateListBackup`: string - Template string for backup listing entries with named placeholders
+   - `TemplateConfigValue`: string - Template string for configuration value display with named placeholders
+   - `TemplateDryRunBackup`: string - Template string for dry-run backup messages with named placeholders
+   - `TemplateError`: string - Template string for error messages with named placeholders
+   - `PatternBackupFilename`: string - Named regex pattern for parsing backup filenames
+   - `PatternConfigLine`: string - Named regex pattern for parsing configuration display lines
+   - `PatternTimestamp`: string - Named regex pattern for parsing timestamps
 
 2. **ConfigValue**
    - `Name`: string - Configuration parameter name
@@ -52,6 +68,20 @@ The BkpFile application follows a layered architecture with clear separation of 
    - `mutex`: sync.Mutex - Mutex for thread-safe access
    - Provides automatic resource cleanup and leak prevention
    - Thread-safe resource tracking for concurrent operations
+
+6. **OutputFormatter**
+   - `config`: *Config - Reference to configuration for format strings
+   - Provides centralized output formatting using printf-style specifications
+   - Supports ANSI color codes and text highlighting
+   - Ensures consistent formatting across all application output
+
+7. **TemplateFormatter**
+   - `config`: *Config - Reference to configuration for template strings and regex patterns
+   - Provides centralized template-based formatting using named placeholders
+   - Supports both Go text/template syntax ({{.name}}) and placeholder syntax (%{name})
+   - Integrates with named regex groups for data extraction and formatting
+   - Supports ANSI color codes and advanced text processing
+   - Enables rich data extraction from structured text using regex patterns
 
 ## Core Functions
 
@@ -98,7 +128,72 @@ The BkpFile application follows a layered architecture with clear separation of 
    - Thread-safe resource tracking with mutex protection
    - Error-resilient cleanup that continues even if individual operations fail
 
-5. **Backup Management**
+5. **Output Formatting**
+   - `NewOutputFormatter(cfg *Config) *OutputFormatter`: Creates new output formatter with configuration
+   - `FormatCreatedBackup(path string) string`: Formats successful backup creation message
+     - Uses `cfg.FormatCreatedBackup` printf-style format string
+     - Supports ANSI color codes and text highlighting
+   - `FormatIdenticalBackup(path string) string`: Formats identical file message
+     - Uses `cfg.FormatIdenticalBackup` printf-style format string
+     - Supports text highlighting for visual distinction
+   - `FormatListBackup(path, creationTime string) string`: Formats backup listing entry
+     - Uses `cfg.FormatListBackup` printf-style format string
+     - Supports color coding for enhanced readability
+   - `FormatConfigValue(name, value, source string) string`: Formats configuration value display
+     - Uses `cfg.FormatConfigValue` printf-style format string
+     - Supports highlighting of configuration names and sources
+   - `FormatDryRunBackup(path string) string`: Formats dry-run backup message
+     - Uses `cfg.FormatDryRunBackup` printf-style format string
+     - Supports visual indicators for dry-run operations
+   - `FormatError(message string) string`: Formats error message
+     - Uses `cfg.FormatError` printf-style format string
+     - Supports error highlighting and visual emphasis
+   - `PrintCreatedBackup(path string)`: Prints formatted backup creation message to stdout
+   - `PrintIdenticalBackup(path string)`: Prints formatted identical file message to stdout
+   - `PrintListBackup(path, creationTime string)`: Prints formatted backup listing entry to stdout
+   - `PrintConfigValue(name, value, source string)`: Prints formatted configuration value to stdout
+   - `PrintDryRunBackup(path string)`: Prints formatted dry-run message to stdout
+   - `PrintError(message string)`: Prints formatted error message to stderr
+
+6. **Template Formatting**
+   - `NewTemplateFormatter(cfg *Config) *TemplateFormatter`: Creates new template formatter with configuration
+   - `FormatWithTemplate(input, pattern, tmplStr string) (string, error)`: Applies text/template to named regex groups
+     - Extracts named groups from input using pattern
+     - Applies Go text/template syntax to extracted data
+     - Returns formatted result or error
+   - `FormatWithPlaceholders(format string, data map[string]string) string`: Replaces %{name} placeholders
+     - Replaces placeholders of the form "%{name}" with corresponding values
+     - Leaves unmatched placeholders intact
+     - Supports ANSI color codes and text formatting
+   - `TemplateCreatedBackup(path string) string`: Formats backup creation using template
+     - Uses `cfg.TemplateCreatedBackup` template string
+     - Extracts data from path using `cfg.PatternBackupFilename` if applicable
+     - Supports rich formatting with extracted filename and timestamp data
+   - `TemplateIdenticalBackup(path string) string`: Formats identical file message using template
+     - Uses `cfg.TemplateIdenticalBackup` template string
+     - Extracts backup information using named regex patterns
+     - Supports conditional formatting based on extracted data
+   - `TemplateListBackup(path, creationTime string) string`: Formats backup listing using template
+     - Uses `cfg.TemplateListBackup` template string
+     - Extracts data from both path and creation time
+     - Supports rich display with parsed filename, timestamp, and note information
+   - `TemplateConfigValue(name, value, source string) string`: Formats configuration display using template
+     - Uses `cfg.TemplateConfigValue` template string
+     - Supports conditional formatting based on source type and value content
+   - `TemplateDryRunBackup(path string) string`: Formats dry-run message using template
+     - Uses `cfg.TemplateDryRunBackup` template string
+     - Extracts planned backup information for rich display
+   - `TemplateError(message, operation string) string`: Formats error message using template
+     - Uses `cfg.TemplateError` template string
+     - Supports operation context and enhanced error information
+   - `PrintTemplateCreatedBackup(path string)`: Prints template-formatted backup creation message to stdout
+   - `PrintTemplateIdenticalBackup(path string)`: Prints template-formatted identical file message to stdout
+   - `PrintTemplateListBackup(path, creationTime string)`: Prints template-formatted backup listing entry to stdout
+   - `PrintTemplateConfigValue(name, value, source string)`: Prints template-formatted configuration value to stdout
+   - `PrintTemplateDryRunBackup(path string)`: Prints template-formatted dry-run message to stdout
+   - `PrintTemplateError(message, operation string)`: Prints template-formatted error message to stderr
+
+7. **Backup Management**
    - `GenerateBackupName(sourcePath, timestamp, note string) string`: Generates backup filename
      - Uses base filename from source path
      - Adds timestamp in YYYY-MM-DD-hh-mm format
@@ -141,23 +236,27 @@ The BkpFile application follows a layered architecture with clear separation of 
      - Creates backup of specified file with optional note
      - Usage: `bkpfile [FILE_PATH] [NOTE]`
      - Displays paths relative to current directory
-     - When a new backup is created: Displays "Created backup: [PATH]"
-     - When file is identical to existing backup: Displays "File is identical to existing backup: [PATH]"
+     - All output uses configurable printf-style format strings or template-based formatting from configuration
+     - When a new backup is created: Uses `FormatCreatedBackup` or `TemplateCreatedBackup` configuration
+     - When file is identical to existing backup: Uses `FormatIdenticalBackup` or `TemplateIdenticalBackup` configuration
+     - Error messages use `FormatError` or `TemplateError` configuration
 
 2. **Workflow Implementation**
    - For creating backup:
      1. Load config
-     2. Validate source file exists and is regular
-     3. Convert file path to relative path if needed
-     4. Compare file with most recent backup
-        - If identical, report existing backup name and exit with `cfg.StatusFileIsIdenticalToExistingBackup`
+     2. Initialize output formatter and template formatter with configuration
+     3. Validate source file exists and is regular
+     4. Convert file path to relative path if needed
+     5. Compare file with most recent backup
+        - If identical, use formatter or template formatter to display existing backup message and exit with `cfg.StatusFileIsIdenticalToExistingBackup`
         - If different, proceed with backup creation
-     5. Generate backup name using base filename
-     6. Create backup directory structure
-     7. Create file copy (or simulate in dry-run) with atomic operations
-     8. Clean up temporary resources
-     9. Exit with `cfg.StatusCreatedBackup` on successful backup creation
-     - Error handling uses configured status codes:
+     6. Generate backup name using base filename
+     7. Create backup directory structure
+     8. Create file copy (or simulate in dry-run) with atomic operations
+     9. Use formatter or template formatter to display success message
+     10. Clean up temporary resources
+     11. Exit with `cfg.StatusCreatedBackup` on successful backup creation
+     - Error handling uses configured status codes and formatted error messages:
        - File not found: exit with `cfg.StatusFileNotFound`
        - Invalid file type: exit with `cfg.StatusInvalidFileType`
        - Permission denied: exit with `cfg.StatusPermissionDenied`
@@ -168,23 +267,26 @@ The BkpFile application follows a layered architecture with clear separation of 
        - Panic recovery with proper logging
        - Context cancellation support
        - Automatic resource cleanup on all error paths
+       - All error messages use configurable format strings or templates
 
    - For listing backups:
      1. Load config
-     2. Convert source path to relative path if needed
-     3. Find backup directory for the file
-     4. List and filter backup files
-     5. Extract backup information and notes
-     6. Sort backups by creation time
-     7. Display backup information
+     2. Initialize output formatter and template formatter with configuration
+     3. Convert source path to relative path if needed
+     4. Find backup directory for the file
+     5. List and filter backup files
+     6. Extract backup information and notes using regex patterns if template formatting is enabled
+     7. Sort backups by creation time
+     8. Use formatter or template formatter to display each backup with configurable format
 
    - For displaying configuration:
      1. Read `BKPFILE_CONFIG` environment variable or use default search path
      2. Process configuration files in order with precedence rules
      3. Merge configuration values with defaults
      4. Track source file for each configuration value
-     5. Display each configuration value with name, computed value, and source
-     6. Exit application after display
+     5. Initialize output formatter and template formatter with configuration
+     6. Use formatter or template formatter to display each configuration value with configurable format
+     7. Exit application after display
 
 3. **Utility Functions**
    - Backup naming follows format: `filename-YYYY-MM-DD-hh-mm[=note]`
@@ -261,6 +363,32 @@ The BkpFile application follows a layered architecture with clear separation of 
    - Cleanup occurs on success, failure, and cancellation
    - No resource leaks in any scenario
    - Comprehensive testing verifies cleanup
+
+## Output Formatting Architecture
+
+1. **Printf-Style Formatting**
+   - **Centralized Formatting**: All output uses `OutputFormatter` for consistency
+   - **Configuration-Driven**: Format strings retrieved from YAML configuration
+   - **Default Preservation**: Default format strings preserve existing output appearance
+   - **ANSI Support**: Format strings support ANSI color codes and text formatting
+
+2. **Text Highlighting and Structure**
+   - **Color Coding**: Different message types use distinct color schemes
+   - **Visual Indicators**: Symbols and formatting enhance message meaning
+   - **Readability**: Consistent formatting improves user experience
+   - **Accessibility**: Color usage doesn't impair functionality for colorblind users
+
+3. **Data Separation**
+   - **Externalized Text**: All user-facing text extracted from code into configuration
+   - **Maintainability**: Text changes don't require code modifications
+   - **Localization Ready**: Architecture supports future internationalization
+   - **Consistency**: Centralized text management ensures uniform messaging
+
+4. **Format String Management**
+   - **Validation**: Format strings validated for printf compatibility
+   - **Error Handling**: Invalid format strings fall back to safe defaults
+   - **Performance**: Format string compilation optimized for repeated use
+   - **Testing**: All format strings tested with various input combinations
 
 ## Concurrency Architecture
 

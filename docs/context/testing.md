@@ -138,6 +138,213 @@ This document outlines the testing requirements, architecture, and approach for 
     - Invalid status code values (non-integer)
     - Missing status code fields (should use defaults)
 
+### Output Formatting Tests
+**Implementation**: `*_test.go` files
+**Requirements**:
+- `TestOutputFormatter`: Tests output formatter functionality
+  - Validates printf-style formatting with various inputs
+  - Tests ANSI color code support
+  - Test cases:
+    - Basic format string application
+    - Format strings with ANSI color codes
+    - Format strings with special characters
+    - Invalid format strings (should fall back to safe defaults)
+    - Empty format strings
+    - Format strings with multiple parameters
+- `TestFormatCreatedBackup`: Tests backup creation message formatting
+  - Validates format string application for successful backup messages
+  - Test cases:
+    - Default format string
+    - Custom format string with colors
+    - Format string with special characters
+    - Various path lengths and characters
+- `TestFormatIdenticalBackup`: Tests identical file message formatting
+  - Validates format string application for identical file messages
+  - Test cases:
+    - Default format string
+    - Custom format string with highlighting
+    - Format string with symbols and colors
+    - Various path formats
+- `TestFormatListBackup`: Tests backup listing entry formatting
+  - Validates format string application for backup list entries
+  - Test cases:
+    - Default format string with two parameters
+    - Custom format string with color coding
+    - Format string with timestamp formatting
+    - Various path and time combinations
+- `TestFormatConfigValue`: Tests configuration value display formatting
+  - Validates format string application for configuration display
+  - Test cases:
+    - Default format string with three parameters
+    - Custom format string with highlighting
+    - Format string with source emphasis
+    - Various configuration name/value combinations
+- `TestFormatDryRunBackup`: Tests dry-run message formatting
+  - Validates format string application for dry-run messages
+  - Test cases:
+    - Default format string
+    - Custom format string with warning indicators
+    - Format string with visual emphasis
+    - Various path formats
+- `TestFormatError`: Tests error message formatting
+  - Validates format string application for error messages
+  - Test cases:
+    - Default format string
+    - Custom format string with error highlighting
+    - Format string with symbols and colors
+    - Various error message types
+- `TestPrintFunctions`: Tests direct printing functions
+  - Validates output to stdout and stderr
+  - Test cases:
+    - PrintCreatedBackup outputs to stdout
+    - PrintIdenticalBackup outputs to stdout
+    - PrintListBackup outputs to stdout
+    - PrintConfigValue outputs to stdout
+    - PrintDryRunBackup outputs to stdout
+    - PrintError outputs to stderr
+    - Output matches formatted strings
+- `TestFormatStringConfiguration`: Tests format string configuration loading
+  - Validates format string loading from YAML
+  - Tests format string defaults
+  - Tests format string precedence with multiple configuration files
+  - Test cases:
+    - Default format strings (should match immutable specification defaults)
+    - Custom format strings from configuration file
+    - Format string precedence with multiple files
+    - Invalid format strings (should use safe defaults)
+    - Missing format string fields (should use defaults)
+    - Format strings with ANSI escape codes
+    - Format strings with special characters
+- `TestFormatStringValidation`: Tests format string validation
+  - Validates printf-style format string compatibility
+  - Test cases:
+    - Valid format strings with correct parameter counts
+    - Invalid format strings with wrong parameter counts
+    - Format strings with unsupported format specifiers
+    - Format strings with malformed syntax
+    - Empty or nil format strings
+    - Format strings with escape sequences
+
+### Template Formatting Tests
+**Implementation**: `*_test.go` files
+**Requirements**:
+- `TestTemplateFormatter`: Tests template formatter functionality
+  - Validates template-based formatting with various inputs
+  - Tests both Go text/template syntax and %{name} placeholder syntax
+  - Test cases:
+    - Basic template string application with {{.name}} syntax
+    - Placeholder formatting with %{name} syntax
+    - Template strings with ANSI color codes
+    - Template strings with conditional logic
+    - Invalid template strings (should fall back to safe defaults)
+    - Empty template strings
+    - Template strings with multiple parameters
+    - Regex pattern integration with template formatting
+- `TestFormatWithTemplate`: Tests Go text/template integration
+  - Validates template application with named regex groups
+  - Test cases:
+    - Valid regex patterns with named groups
+    - Template strings with {{.name}} syntax
+    - Complex template logic with conditionals
+    - Invalid regex patterns (should return error)
+    - No regex matches (should return error)
+    - Invalid template syntax (should return error)
+    - Template execution errors
+- `TestFormatWithPlaceholders`: Tests placeholder replacement
+  - Validates %{name} placeholder replacement functionality
+  - Test cases:
+    - Basic placeholder replacement
+    - Multiple placeholders in single string
+    - Unmatched placeholders (should be left intact)
+    - Empty placeholder names
+    - Placeholders with special characters
+    - ANSI color codes in placeholder values
+    - Nested placeholder-like strings
+- `TestTemplateCreatedBackup`: Tests backup creation message template formatting
+  - Validates template string application for successful backup messages
+  - Test cases:
+    - Default template string with path extraction
+    - Custom template string with filename and timestamp extraction
+    - Template string with ANSI color codes
+    - Backup paths with notes
+    - Backup paths without notes
+    - Invalid backup path formats (should fall back gracefully)
+- `TestTemplateIdenticalBackup`: Tests identical file message template formatting
+  - Validates template string application for identical file messages
+  - Test cases:
+    - Default template string with path extraction
+    - Custom template string with rich backup information
+    - Template string with conditional formatting based on extracted data
+    - Backup paths with and without notes
+    - Various backup filename formats
+- `TestTemplateListBackup`: Tests backup listing entry template formatting
+  - Validates template string application for backup list entries
+  - Test cases:
+    - Default template string with path and time parameters
+    - Custom template string with extracted filename and timestamp data
+    - Template string with note extraction and display
+    - Various timestamp formats
+    - Backup paths with special characters
+    - Template formatting with missing data (graceful degradation)
+- `TestTemplateConfigValue`: Tests configuration value display template formatting
+  - Validates template string application for configuration display
+  - Test cases:
+    - Default template string with three parameters
+    - Custom template string with conditional formatting based on source
+    - Template string with value type detection
+    - Various configuration name/value combinations
+    - Source highlighting and emphasis
+- `TestTemplateDryRunBackup`: Tests dry-run message template formatting
+  - Validates template string application for dry-run messages
+  - Test cases:
+    - Default template string with path extraction
+    - Custom template string with planned backup information
+    - Template string with filename and timestamp extraction
+    - Various planned backup path formats
+- `TestTemplateError`: Tests error message template formatting
+  - Validates template string application for error messages
+  - Test cases:
+    - Default template string with message parameter
+    - Custom template string with operation context
+    - Template string with error categorization
+    - Various error message types
+    - Operation context integration
+- `TestTemplateStringConfiguration`: Tests template string configuration loading
+  - Validates template string loading from YAML
+  - Tests template string defaults
+  - Tests template string precedence with multiple configuration files
+  - Test cases:
+    - Default template strings (should match immutable specification defaults)
+    - Custom template strings from configuration file
+    - Template string precedence with multiple files
+    - Invalid template strings (should use safe defaults)
+    - Missing template string fields (should use defaults)
+    - Template strings with Go text/template syntax
+    - Template strings with %{name} placeholder syntax
+    - Template strings with ANSI escape codes
+- `TestRegexPatternConfiguration`: Tests regex pattern configuration loading
+  - Validates regex pattern loading from YAML
+  - Tests regex pattern defaults
+  - Tests regex pattern precedence with multiple configuration files
+  - Test cases:
+    - Default regex patterns (should match immutable specification defaults)
+    - Custom regex patterns from configuration file
+    - Regex pattern precedence with multiple files
+    - Invalid regex patterns (should use safe defaults)
+    - Missing regex pattern fields (should use defaults)
+    - Named capture group validation
+    - Regex pattern compilation and performance
+- `TestTemplateRegexIntegration`: Tests integration between templates and regex patterns
+  - Validates data extraction and template application workflow
+  - Test cases:
+    - Backup filename parsing with template formatting
+    - Timestamp parsing with template formatting
+    - Configuration line parsing with template formatting
+    - Complex data extraction scenarios
+    - Error handling when regex patterns don't match
+    - Fallback behavior for template formatting failures
+    - Performance with large datasets
+
 ### Integration Tests
 **Implementation**: `*_test.go` files
 **Requirements**:
@@ -145,44 +352,110 @@ This document outlines the testing requirements, architecture, and approach for 
   - Validates backup creation with various notes
   - Tests status code exit behavior in full application context
   - Tests enhanced error handling in real scenarios
+  - **Updated for printf-style formatting**:
+    - Tests output formatting with default format strings
+    - Tests output formatting with custom format strings
+    - Validates ANSI color code rendering in terminal output
+    - Tests format string configuration loading and application
+  - **Updated for template-based formatting**:
+    - Tests template formatting with default template strings
+    - Tests template formatting with custom template strings
+    - Validates regex pattern integration with template formatting
+    - Tests template string configuration loading and application
+    - Validates data extraction and rich formatting capabilities
   - Test cases:
-    - Backup with note (should exit with configured `status_created_backup`)
-    - Backup without note (should exit with configured `status_created_backup`)
-    - Backup of identical file (should exit with configured `status_file_is_identical_to_existing_backup`)
-    - Backup of modified file (should exit with configured `status_created_backup`)
+    - Backup with note (should exit with configured `status_created_backup` and use `format_created_backup`)
+    - Backup without note (should exit with configured `status_created_backup` and use `format_created_backup`)
+    - Backup of identical file (should exit with configured `status_file_is_identical_to_existing_backup` and use `format_identical_backup`)
+    - Backup of modified file (should exit with configured `status_created_backup` and use `format_created_backup`)
     - Backup with custom status code configuration
-    - Error scenarios with proper status codes
+    - Backup with custom format string configuration
+    - Error scenarios with proper status codes and formatted error messages
 - `TestListFlag`: Tests list flag functionality
   - Validates --list flag behavior
+  - **Updated for printf-style formatting**:
+    - Tests backup listing with default format strings
+    - Tests backup listing with custom format strings
+    - Validates color-coded output for enhanced readability
+  - **Updated for template-based formatting**:
+    - Tests template formatting with default template strings
+    - Tests template formatting with custom template strings
+    - Validates regex pattern integration with template formatting
+    - Tests template string configuration loading and application
+    - Validates data extraction and rich formatting capabilities
   - Test cases:
-    - List with existing backups
+    - List with existing backups (using `format_list_backup`)
     - List with no backups
-    - List with invalid file path
+    - List with invalid file path (using `format_error`)
+    - List with custom format string configuration
 - `TestConfigFlag`: Tests config flag functionality
   - Validates --config flag behavior
+  - **Updated for printf-style formatting**:
+    - Tests configuration display with default format strings
+    - Tests configuration display with custom format strings
+    - Validates format string configuration display
+  - **Updated for template-based formatting**:
+    - Tests template formatting with default template strings
+    - Tests template formatting with custom template strings
+    - Validates regex pattern integration with template formatting
+    - Tests template string configuration loading and application
+    - Validates data extraction and rich formatting capabilities
   - Test cases:
-    - Display config with default values only (including status codes)
+    - Display config with default values only (including status codes and format strings)
     - Display config with values from single configuration file
     - Display config with values from multiple configuration files
     - Display config with `BKPFILE_CONFIG` environment variable set
     - Display config with hard-coded default path when environment variable not set
-    - Display config with invalid configuration files (error handling)
+    - Display config with invalid configuration files (error handling using `format_error`)
     - Display config with custom status code values
+    - Display config with custom format string values
     - Verify application exits after displaying configuration
+    - Verify format string configuration is displayed with proper formatting
 - `TestCmdArgsValidation`: Tests command-line arguments
   - Validates command-line interface
+  - **Updated for printf-style formatting**:
+    - Tests error message formatting for invalid arguments
+  - **Updated for template-based formatting**:
+    - Tests template formatting with default template strings
+    - Tests template formatting with custom template strings
+    - Validates regex pattern integration with template formatting
+    - Tests template string configuration loading and application
+    - Validates data extraction and rich formatting capabilities
   - Test cases:
-    - Invalid flag combinations
-    - Missing file path
-    - Invalid file path
+    - Invalid flag combinations (using `format_error`)
+    - Missing file path (using `format_error`)
+    - Invalid file path (using `format_error`)
     - Config flag with other arguments (should be ignored)
 - `TestDryRun`: Tests dry-run mode
   - Validates dry-run mode behavior
+  - **Updated for printf-style formatting**:
+    - Tests dry-run output with default format strings
+    - Tests dry-run output with custom format strings
+  - **Updated for template-based formatting**:
+    - Tests template formatting with default template strings
+    - Tests template formatting with custom template strings
+    - Validates regex pattern integration with template formatting
+    - Tests template string configuration loading and application
+    - Validates data extraction and rich formatting capabilities
   - Test cases:
-    - Dry run with identical file
-    - Dry run with modified file
-    - Dry run with list flag
+    - Dry run with identical file (using `format_identical_backup`)
+    - Dry run with modified file (using `format_dry_run_backup`)
+    - Dry run with list flag (using `format_list_backup`)
     - Dry run with resource cleanup verification
+    - Dry run with custom format string configuration
+- `TestFormatStringIntegration`: Tests format string configuration in full application context
+  - Tests all operations with custom format string configurations
+  - Tests format string precedence with multiple configuration files
+  - Tests format string error handling and fallbacks
+  - Test cases:
+    - Backup creation with custom format strings
+    - List operation with custom format strings
+    - Configuration display with custom format strings
+    - Error handling with custom error format strings
+    - Format string precedence with multiple configuration files
+    - Invalid format strings falling back to safe defaults
+    - ANSI color code rendering in various terminal environments
+    - Format string validation and error handling
 - `TestConfigurationIntegration`: Tests configuration discovery in full application context
   - Tests backup operations with custom configuration paths
   - Tests environment variable override in real scenarios
@@ -216,6 +489,36 @@ This document outlines the testing requirements, architecture, and approach for 
     - Failed operations with cleanup verification
     - Interrupted operations with cleanup verification
     - No temporary files left in any scenario
+- `TestTemplateFormattingIntegration`: Tests template formatting configuration in full application context
+  - Tests all operations with custom template string configurations
+  - Tests template string precedence with multiple configuration files
+  - Tests template string error handling and fallbacks
+  - Tests regex pattern integration with template formatting
+  - Test cases:
+    - Backup creation with custom template strings and regex patterns
+    - List operation with custom template strings and data extraction
+    - Configuration display with custom template strings
+    - Error handling with custom error template strings
+    - Template string precedence with multiple configuration files
+    - Invalid template strings falling back to safe defaults
+    - Regex pattern matching and data extraction in various scenarios
+    - Template formatting with missing or incomplete data
+    - ANSI color code rendering in template-formatted output
+    - Template validation and error handling
+    - Performance with complex template strings and large datasets
+- `TestRegexPatternIntegration`: Tests regex pattern configuration in full application context
+  - Tests regex pattern loading and compilation
+  - Tests named capture group extraction and usage
+  - Tests pattern precedence with multiple configuration files
+  - Test cases:
+    - Backup filename parsing with custom regex patterns
+    - Timestamp parsing with custom regex patterns
+    - Configuration line parsing with custom regex patterns
+    - Invalid regex patterns falling back to safe defaults
+    - Regex pattern precedence with multiple configuration files
+    - Named capture group validation and extraction
+    - Performance with complex regex patterns and large datasets
+    - Error handling for malformed regex patterns
 
 ### Linting and Code Quality Tests
 **Implementation**: `Makefile`, CI/CD pipeline
@@ -309,6 +612,25 @@ This document outlines the testing requirements, architecture, and approach for 
 - Application exit codes must be validated for all conditions
 - Status code precedence and merging must be tested
 - Default status code behavior must be verified
+- **Output formatting functionality must be comprehensively tested**
+- **Format string configuration must be thoroughly tested**
+- **Printf-style formatting must be validated for all output types**
+- **ANSI color code support must be verified**
+- **Format string validation and error handling must be tested**
+- **Format string precedence and merging must be tested**
+- **Default format string behavior must be verified**
+- **Text highlighting and structure formatting must be validated**
+- **Template-based formatting functionality must be comprehensively tested**
+- **Template string configuration must be thoroughly tested**
+- **Go text/template syntax must be validated for all output types**
+- **Placeholder syntax (%{name}) must be validated for all output types**
+- **Regex pattern integration must be verified**
+- **Named capture group extraction must be tested**
+- **Template string validation and error handling must be tested**
+- **Template string precedence and merging must be tested**
+- **Default template string behavior must be verified**
+- **Data extraction and rich formatting capabilities must be validated**
+- **Template formatting fallback behavior must be tested**
 - Resource cleanup must be tested in all scenarios
 - Context cancellation and timeout handling must be verified
 - Enhanced error handling must be thoroughly tested
@@ -330,6 +652,8 @@ go test ./internal/bkpfile -v -cover
 go test ./internal/bkpfile -v -run TestResourceManager
 go test ./internal/bkpfile -v -run TestCreateBackupWithCleanup
 go test ./internal/bkpfile -v -run TestCreateBackupWithContext
+go test ./internal/bkpfile -v -run TestOutputFormatter
+go test ./internal/bkpfile -v -run TestFormatString
 
 # Run benchmarks
 go test ./internal/bkpfile -v -bench=.
@@ -348,6 +672,18 @@ make test
 - Test data covers various file sizes and types
 - Test data includes special characters and edge cases
 - Test configuration files cover various YAML structures and edge cases
+- **Test configuration files include various format string configurations**
+- **Test data includes format strings with ANSI color codes**
+- **Test data includes invalid format strings for error handling**
+- **Test data covers format string precedence scenarios**
+- **Test data includes template strings with Go text/template syntax**
+- **Test data includes template strings with %{name} placeholder syntax**
+- **Test data includes regex patterns with named capture groups**
+- **Test data includes invalid template strings for error handling**
+- **Test data includes invalid regex patterns for error handling**
+- **Test data covers template string precedence scenarios**
+- **Test data covers regex pattern precedence scenarios**
+- **Test data includes complex data extraction scenarios**
 - Temporary resources are tracked and verified for cleanup
 - Test data includes scenarios for context cancellation
 - Test files simulate various error conditions
@@ -361,4 +697,11 @@ make test
 - Resource cleanup must be verified in CI environment
 - Tests must run on multiple platforms
 - Memory leak detection must be performed
-- Static analysis must pass 
+- Static analysis must pass
+- **Format string validation must pass in CI environment**
+- **Output formatting tests must pass on all supported platforms**
+- **ANSI color code rendering must be tested in CI environment**
+- **Template string validation must pass in CI environment**
+- **Template formatting tests must pass on all supported platforms**
+- **Regex pattern compilation must be tested in CI environment**
+- **Data extraction and template integration must be validated in CI** 
